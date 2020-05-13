@@ -25,25 +25,22 @@ from contextlib import contextmanager
 import aiofiles
 from async_property import async_property
 
-from .errorhandler import ErrorHandler
-from .file_detector import FileDetector, LocalFileDetector
-from .mobile import Mobile
-from .switch_to import SwitchTo
-from .webelement import WebElement
-
 from seleniumx.common.exceptions import (InvalidArgumentException,
                                         WebDriverException,
                                         NoSuchCookieException,
                                         UnknownMethodException)
 from seleniumx.webdriver.common.by import By
-from seleniumx.webdriver.common.html5.application_cache import ApplicationCache
 from seleniumx.webdriver.common.timeouts import Timeouts
 from seleniumx.webdriver.common.enums import Command
-
 from seleniumx.webdriver.support.relative_locator import RelativeBy
-
 from seleniumx.webdriver.remote.command_codec import CommandCodec
 from seleniumx.webdriver.remote.http_executor import HttpExecutor
+from seleniumx.webdriver.remote.errorhandler import ErrorHandler
+from seleniumx.webdriver.remote.file_detector import FileDetector, LocalFileDetector
+from seleniumx.webdriver.remote.mobile import Mobile
+from seleniumx.webdriver.remote.switch_to import SwitchTo
+from seleniumx.webdriver.remote.webelement import WebElement
+
 
 _W3C_CAPABILITY_NAMES = frozenset([
     'acceptInsecureCerts',
@@ -197,7 +194,7 @@ class _BaseDriver(object):
         return CommandCodec()
     
     
-class WebDriver(_BaseDriver):
+class RemoteWebDriver(_BaseDriver):
     """ Controls a browser by sending commands to a remote server.
     This server is expected to be running the WebDriver wire protocol
     as defined at
@@ -216,8 +213,9 @@ class WebDriver(_BaseDriver):
     @classmethod
     async def create(cls, **kwargs): 
         """ Generic method that can be used to create instance of any WebDriver and also start corresponding driver service with new session """
-        webdriver_instance = cls(**kwargs)
+        webdriver_instance = None
         try:
+            webdriver_instance = cls(**kwargs)
             service_starter = webdriver_instance.start_service
             if inspect.iscoroutinefunction(service_starter):
                 await service_starter()
@@ -229,18 +227,16 @@ class WebDriver(_BaseDriver):
                 start_client()
             await webdriver_instance.start_session()
             return webdriver_instance
-        except Exception as ex:
+        finally:
             try:
-                quit_ = webdriver_instance.quit
-                if inspect.iscoroutinefunction(quit_):
-                    await quit_()
-                elif callable(quit_):
-                    quit_()
+                if webdriver_instance is not None:
+                    quit_ = webdriver_instance.quit
+                    if inspect.iscoroutinefunction(quit_):
+                        await quit_()
+                    elif callable(quit_):
+                        quit_()
             except:
                 pass
-            #see pep 409
-            raise WebDriverException(f"Something went wrong while starting a server session. Details - {str(ex)}") from ex
-
 
     def __init__(
         self,
@@ -276,15 +272,23 @@ class WebDriver(_BaseDriver):
         self.user_capabilities_w3c = {}
         self.server_capabilities = {}
         self._set_user_capabilities(options, desired_capabilities, browser_profile)
-        self._http_executor = HttpExecutor(self, base_url=server_url, keep_alive=keep_alive)
         self._is_remote = True
         self._switch_to = SwitchTo(self)
         self._mobile = Mobile(self)
         self.session_id = None
         self.command_codec = command_codec or self._determine_command_codec(self.user_capabilities)
+        self._http_executor = HttpExecutor(self, self.command_codec, base_url=server_url, keep_alive=keep_alive)
         self.error_handler = ErrorHandler()
-        self.w3c = True
+        self._w3c = True
         super().__init__(file_detector=file_detector)
+    
+    @property
+    def w3c(self):
+        return self._w3c
+    
+    @property
+    def is_remote(self):
+        return self._is_remote
     
     @property
     def server_url(self):
@@ -340,8 +344,8 @@ class WebDriver(_BaseDriver):
         if not self.server_capabilities:
             self.server_capabilities = response.get('capabilities')
         # Double check to see if we have a W3C Compliant browser
-        self.w3c = response.get('status') is None
-        self._http_executor.w3c = self.w3c
+        self._w3c = response.get('status') is None
+        self._http_executor.w3c = self._w3c
     
     async def execute(
         self,
@@ -395,7 +399,7 @@ class WebDriver(_BaseDriver):
         """
         converted_args = list(args)
         command = None
-        if self.w3c:
+        if self._w3c:
             command = Command.W3C_EXECUTE_SCRIPT
         else:
             command = Command.EXECUTE_SCRIPT
@@ -419,7 +423,7 @@ class WebDriver(_BaseDriver):
                 driver.execute_async_script(script)
         """
         converted_args = list(args)
-        if self.w3c:
+        if self._w3c:
             command = Command.W3C_EXECUTE_SCRIPT_ASYNC
         else:
             command = Command.EXECUTE_ASYNC_SCRIPT
@@ -490,7 +494,7 @@ class WebDriver(_BaseDriver):
 
                 driver.current_window_handle
         """
-        if self.w3c:
+        if self._w3c:
             command = Command.W3C_GET_CURRENT_WINDOW_HANDLE
         else:
             command = Command.GET_CURRENT_WINDOW_HANDLE
@@ -506,7 +510,7 @@ class WebDriver(_BaseDriver):
 
                 driver.window_handles
         """
-        if self.w3c:
+        if self._w3c:
             command = Command.W3C_GET_WINDOW_HANDLES
         else:
             command = Command.GET_WINDOW_HANDLES
@@ -516,7 +520,7 @@ class WebDriver(_BaseDriver):
     async def maximize_window(self):
         """ Maximizes the current window that webdriver is using """
         params = None
-        if self.w3c:
+        if self._w3c:
             command = Command.W3C_MAXIMIZE_WINDOW
         else:
             command = Command.MAXIMIZE_WINDOW
@@ -602,7 +606,7 @@ class WebDriver(_BaseDriver):
 
                 driver.get_cookie('my_cookie')
         """
-        if self.w3c:
+        if self._w3c:
             try:
                 response = await self.execute(Command.GET_COOKIE, {'name': name})
                 return response['value']
@@ -669,7 +673,7 @@ class WebDriver(_BaseDriver):
 
                 driver.implicitly_wait(30)
         """
-        if self.w3c:
+        if self._w3c:
             timeout_ms = int(float(time_to_wait) * 1000)
             await self.execute(Command.SET_TIMEOUTS, params={'implicit': timeout_ms})
         else:
@@ -688,7 +692,7 @@ class WebDriver(_BaseDriver):
 
                 driver.set_script_timeout(30)
         """
-        if self.w3c:
+        if self._w3c:
             timeout_ms = int(float(time_to_wait) * 1000)
             await self.execute(Command.SET_TIMEOUTS, {'script': timeout_ms})
         else:
@@ -752,7 +756,7 @@ class WebDriver(_BaseDriver):
 
         :rtype: WebElement
         """
-        by, value = self._get_w3aware_by_value(by, value)
+        by, value = By.get_w3caware_by_value(by, value, self._w3c)
         response = await self.execute(Command.FIND_ELEMENT, {'using': by, 'value': value})
         return response.get('value')
 
@@ -770,9 +774,9 @@ class WebDriver(_BaseDriver):
             _pkg = '.'.join(__name__.split('.')[:-1])
             raw_function = pkgutil.get_data(_pkg, "findElements.js").decode("utf8")
             find_element_js = f"return ({raw_function}).apply(null, arguments);"
-            return self.execute_script(find_element_js, by.to_dict())
+            return await self.execute_script(find_element_js, by.to_dict())
 
-        by, value = self._get_w3aware_by_value(by, value)
+        by, value = By.get_w3caware_by_value(by, value, self._w3c)
 
         # Return empty list if driver returns no value
         response = await self.execute(Command.FIND_ELEMENTS, {'using': by, 'value': value})
@@ -857,7 +861,7 @@ class WebDriver(_BaseDriver):
 
                 driver.set_window_size(800,600)
         """
-        if self.w3c:
+        if self._w3c:
             if windowHandle != "current":
                 warnings.warn("Only 'current' window is supported for W3C compatibile browsers.")
             await self.set_window_rect(width=int(width), height=int(height))
@@ -873,7 +877,7 @@ class WebDriver(_BaseDriver):
 
                 driver.get_window_size()
         """
-        if self.w3c:
+        if self._w3c:
             if windowHandle != "current":
                 warnings.warn("Only 'current' window is supported for W3C compatibile browsers.")
             size = await self.get_window_rect()
@@ -895,7 +899,7 @@ class WebDriver(_BaseDriver):
 
                 driver.set_window_position(0,0)
         """
-        if self.w3c:
+        if self._w3c:
             if windowHandle != "current":
                 warnings.warn("Only 'current' window is supported for W3C compatibile browsers.")
             response = await self.set_window_rect(x=int(x), y=int(y))
@@ -912,7 +916,7 @@ class WebDriver(_BaseDriver):
 
                 driver.get_window_position()
         """
-        if self.w3c:
+        if self._w3c:
             if windowHandle != "current":
                 warnings.warn("Only 'current' window is supported for W3C compatibile browsers.")
             position = await self.get_window_rect()
@@ -947,7 +951,7 @@ class WebDriver(_BaseDriver):
                 driver.set_window_rect(width=100, height=200)
                 driver.set_window_rect(x=10, y=10, width=100, height=200)
         """
-        if not self.w3c:
+        if not self._w3c:
             raise UnknownMethodException("set_window_rect is only supported for W3C compatible browsers")
 
         if (x is None and y is None) and (height is None and width is None):
@@ -998,7 +1002,7 @@ class WebDriver(_BaseDriver):
 
                 driver.log_types
         """
-        if self.w3c:
+        if self._w3c:
             response = await self.execute(Command.GET_AVAILABLE_LOG_TYPES)
             return response['value']
         return []
@@ -1027,21 +1031,6 @@ class WebDriver(_BaseDriver):
         """
         return self.server_capabilities
     
-    def _get_w3aware_by_value(self, by, value):
-        if self.w3c:
-            if by == By.ID:
-                by = By.CSS_SELECTOR
-                value = f'[id="{value}"]'
-            elif by == By.TAG_NAME:
-                by = By.CSS_SELECTOR
-            elif by == By.CLASS_NAME:
-                by = By.CSS_SELECTOR
-                value = f".{value}"
-            elif by == By.NAME:
-                by = By.CSS_SELECTOR
-                value = f'[name="{value}"]'
-        return (by, value)
-
     def _set_user_capabilities(self, options, desired_capabilities, browser_profile):
         capabilities = {}
         if options is not None:

@@ -15,6 +15,7 @@ class HttpExecutor(object):
     def __init__(
         self,
         webdriver_instance,
+        command_codec : CommandCodec,
         base_url = None,
         keep_alive = True,
         timeout = None,
@@ -26,7 +27,7 @@ class HttpExecutor(object):
         self._keep_alive = keep_alive
         self._timeout = timeout
         self._ca_certs = ca_certs
-        self._command_codec = CommandCodec()
+        self._command_codec = command_codec
         self._headers = self._get_default_headers(headers)
         self._w3c = False
         self._request_wrapper = WebDriverRequestWrapper()

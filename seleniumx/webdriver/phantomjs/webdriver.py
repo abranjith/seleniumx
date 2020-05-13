@@ -18,7 +18,7 @@
 import warnings
 
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
-from seleniumx.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from .service import Service
 
 

@@ -24,7 +24,7 @@ try:
 except ImportError:
     import httplib as http_client
 
-from seleniumx.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from seleniumx.common.exceptions import WebDriverException
 from seleniumx.webdriver.support.ui import WebDriverWait
 

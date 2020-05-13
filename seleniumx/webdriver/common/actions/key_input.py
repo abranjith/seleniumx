@@ -14,18 +14,15 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-from . import interaction
 
-from .input_device import InputDevice
-from .interaction import (Interaction,
-                          Pause)
-
+from seleniumx.webdriver.common.actions.device import InputDevice
+from seleniumx.webdriver.common.actions.interaction import InteractionType, TypingInteraction, Pause
 
 class KeyInput(InputDevice):
     def __init__(self, name):
         super(KeyInput, self).__init__()
         self.name = name
-        self.type = interaction.KEY
+        self.type = InteractionType.KEY
 
     def encode(self):
         return {"type": self.type, "id": self.name, "actions": [acts.encode() for acts in self.actions]}
@@ -38,14 +35,3 @@ class KeyInput(InputDevice):
 
     def create_pause(self, pause_duration=0):
         self.add_action(Pause(self, pause_duration))
-
-
-class TypingInteraction(Interaction):
-
-    def __init__(self, source, type_, key):
-        super(TypingInteraction, self).__init__(source)
-        self.type = type_
-        self.key = key
-
-    def encode(self):
-        return {"type": self.type, "value": self.key}

@@ -22,7 +22,7 @@ except ImportError:
     import httplib as http_client
 
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
-from seleniumx.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from .service import Service
 from .remote_connection import SafariRemoteConnection
 

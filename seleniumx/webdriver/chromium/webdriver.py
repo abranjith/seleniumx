@@ -18,7 +18,7 @@
 import warnings
 
 from seleniumx.webdriver.chromium.command_codec import ChromiumCommandCodec
-from seleniumx.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from seleniumx.webdriver.common.enums import Command
 from seleniumx.webdriver.common.options import BaseOptions
 from seleniumx.webdriver.common.service import Service

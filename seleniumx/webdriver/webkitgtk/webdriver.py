@@ -20,7 +20,7 @@ try:
 except ImportError:
     import httplib as http_client
 
-from seleniumx.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from .service import Service
 from .options import Options
 

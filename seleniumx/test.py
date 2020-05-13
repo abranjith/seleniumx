@@ -5,6 +5,8 @@ import httpx
 from seleniumx.webdriver.chrome.webdriver import ChromeDriver
 from seleniumx.webdriver.common.by import By
 
+print(sys.modules['seleniumx'])
+
 def for_else(n):
     print(__name__)
     for i in range(n):
@@ -55,5 +57,5 @@ if __name__ == "__main__":
     #asyncio.run(selenium_test())
     loop = asyncio.ProactorEventLoop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(selenium_test())
-    #loop.run_until_complete(get())
+    #loop.run_until_complete(selenium_test())
+    loop.run_until_complete(get())

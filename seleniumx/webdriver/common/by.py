@@ -15,11 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-The By implementation.
-"""
-
-
 class By(object):
     """
     Set of supported locator strategies.
@@ -33,3 +28,20 @@ class By(object):
     TAG_NAME = "tag name"
     CLASS_NAME = "class name"
     CSS_SELECTOR = "css selector"
+
+    @staticmethod
+    def get_w3caware_by_value(by, value, w3c_flag):
+        if not w3c_flag:
+            return (by, value)
+        if by == By.ID:
+            by = By.CSS_SELECTOR
+            value = f'[id="{value}"]'
+        elif by == By.TAG_NAME:
+            by = By.CSS_SELECTOR
+        elif by == By.CLASS_NAME:
+            by = By.CSS_SELECTOR
+            value = f".{value}"
+        elif by == By.NAME:
+            by = By.CSS_SELECTOR
+            value = f'[name="{value}"]'
+        return (by, value)

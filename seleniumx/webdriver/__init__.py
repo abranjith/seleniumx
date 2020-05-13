@@ -34,7 +34,7 @@ from .webkitgtk.webdriver import WebDriver as WebKitGTK # noqa
 from .webkitgtk.options import Options as WebKitGTKOptions # noqa
 from .wpewebkit.webdriver import WebDriver as WPEWebKit # noqa
 from .wpewebkit.options import Options as WPEWebKitOptions # noqa
-from .remote.webdriver import WebDriver as Remote  # noqa
+from .remote.webdriver import RemoteWebDriver as Remote  # noqa
 from .common.desired_capabilities import DesiredCapabilities  # noqa
 from .common.action_chains import ActionChains  # noqa
 from .common.touch_actions import TouchActions  # noqa

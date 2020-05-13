@@ -14,18 +14,22 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-from .interaction import Interaction, KEY
+
+
 from .key_input import KeyInput
 from ..utils import keys_to_typing
-
+from seleniumx.webdriver.common.actions.interaction import InteractionType, Interaction
 
 class KeyActions(Interaction):
 
-    def __init__(self, source=None):
+    def __init__(
+        self,
+        source = None
+    ):
         if source is None:
-            source = KeyInput(KEY)
+            source = KeyInput(InteractionType.KEY)
         self.source = source
-        super(KeyActions, self).__init__(source)
+        super().__init__(source)
 
     def key_down(self, letter):
         return self._key_action("create_key_down", letter)
