@@ -86,10 +86,9 @@ class Timeouts(object):
     def _to_json(self):
         timeouts = {}
         if self._implicit_wait is not None:
-            timeouts["implicit"] = self._implicit_wait
+            timeouts['implicit'] = self._implicit_wait
         if self._page_load is not None:
-            timeouts["pageLoad"] = self._page_load
+            timeouts['pageLoad'] = self._page_load
         if self._script is not None:
-            timeouts["script"] = self._script
-
+            timeouts['script'] = self._script
         return timeouts

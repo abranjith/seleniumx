@@ -15,17 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-The Alert implementation.
-"""
+from async_property import async_property
 
+from seleniumx.webdriver.common.enums import Command
 from seleniumx.webdriver.common.utils import keys_to_typing
 from seleniumx.webdriver.remote.command import CommandInfo
 
-
 class Alert(object):
-    """
-    Allows to work with alerts.
+    """ Allows to work with alerts.
 
     Use this class to interact with alert prompts.  It contains methods for dismissing,
     accepting, inputting, and getting text from alert prompts.
@@ -56,50 +53,43 @@ class Alert(object):
         :Args:
          - driver: The WebDriver instance which performs user actions.
         """
-        self.driver = driver
+        self._driver = driver
+        self._w3c = self._driver.w3c
 
-    @property
-    def text(self):
-        """
-        Gets the text of the Alert.
-        """
-        if self.driver.w3c:
-            return self.driver.execute(Command.W3C_GET_ALERT_TEXT)["value"]
-        else:
-            return self.driver.execute(Command.GET_ALERT_TEXT)["value"]
+    @async_property
+    async def text(self):
+        """ Gets the text of the Alert """
+        command = Command.W3C_GET_ALERT_TEXT if self._w3c else Command.GET_ALERT_TEXT
+        response = await self._driver.execute(command)
+        return response['value']
 
-    def dismiss(self):
-        """
-        Dismisses the alert available.
-        """
-        if self.driver.w3c:
-            self.driver.execute(Command.W3C_DISMISS_ALERT)
-        else:
-            self.driver.execute(Command.DISMISS_ALERT)
+    async def dismiss(self):
+        """ Dismisses the alert available. """
+        command = Command.W3C_DISMISS_ALERT if self._w3c else Command.DISMISS_ALERT
+        await self._driver.execute(command)
 
-    def accept(self):
-        """
-        Accepts the alert available.
+    async def accept(self):
+        """ Accepts the alert available.
 
         Usage::
         Alert(driver).accept() # Confirm a alert dialog.
         """
-        if self.driver.w3c:
-            self.driver.execute(Command.W3C_ACCEPT_ALERT)
-        else:
-            self.driver.execute(Command.ACCEPT_ALERT)
+        command = Command.W3C_ACCEPT_ALERT if self._w3c else Command.ACCEPT_ALERT
+        await self._driver.execute(command)
 
-    def send_keys(self, keysToSend):
-        """
-        Send Keys to the Alert.
+    async def send_keys(
+        self,
+        keys_to_send
+    ):
+        """ Send Keys to the Alert.
 
         :Args:
-         - keysToSend: The text to be sent to Alert.
+         - keys_to_send: The text to be sent to Alert.
 
 
         """
-        if self.driver.w3c:
-            self.driver.execute(Command.W3C_SET_ALERT_VALUE, {'value': keys_to_typing(keysToSend),
-                                                              'text': keysToSend})
+        if self._w3c:
+            await self._driver.execute(Command.W3C_SET_ALERT_VALUE, {'value': keys_to_typing(keys_to_send),
+                                                                    'text': keys_to_send})
         else:
-            self.driver.execute(Command.SET_ALERT_VALUE, {'text': keysToSend})
+            await self._driver.execute(Command.SET_ALERT_VALUE, {'text': keys_to_send})

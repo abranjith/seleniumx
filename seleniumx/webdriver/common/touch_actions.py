@@ -15,12 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-The Touch Actions implementation
-"""
-
+from seleniumx.webdriver.common.enums import Command
 from seleniumx.webdriver.remote.command import CommandInfo
-
 
 class TouchActions(object):
     """

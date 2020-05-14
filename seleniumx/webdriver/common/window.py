@@ -15,15 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-The WindowTypes implementation.
-"""
-
-from __future__ import unicode_literals
-
-
 class WindowTypes(object):
     """Set of supported window types."""
 
-    TAB = 'tab'
-    WINDOW = 'window'
+    TAB = "tab"
+    WINDOW = "window"

@@ -16,9 +16,7 @@
 # under the License.
 
 class By(object):
-    """
-    Set of supported locator strategies.
-    """
+    """ Set of supported locator strategies. """
 
     ID = "id"
     XPATH = "xpath"

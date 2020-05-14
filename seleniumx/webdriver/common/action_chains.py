@@ -15,10 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import time
+import warnings
+import asyncio
 
 from seleniumx.webdriver.remote.command import CommandInfo
-
 from seleniumx.webdriver.common.actions.action_builder import ActionBuilder
 from seleniumx.webdriver.common.enums import Command
 from seleniumx.webdriver.common.utils import keys_to_typing
@@ -71,22 +71,27 @@ class ActionChains(object):
         if self._w3c:
             self._w3c_actions = ActionBuilder(driver)
 
-    def perform(self):
+    async def perform(self):
         """ Performs all stored actions. """
         if self._w3c:
-            self._w3c_actions.perform()
+            await self._w3c_actions.perform()
         else:
+            if not self._actions:
+                warnings.warn(f"There are no actions found to perform")
             for action in self._actions:
-                action()
+                await action()
 
-    def reset_actions(self):
+    async def reset_actions(self):
         """ Clears actions that are already stored locally and on the remote end """
         if self._w3c:
-            self._w3c_actions.clear_remote_actions()
+            await self._w3c_actions.clear_remote_actions()
             self._w3c_actions.clear_actions()
         self._actions = []
 
-    def click(self, on_element=None):
+    def click(
+        self,
+        on_element = None
+    ):
         """ Clicks an element.
 
         :Args:
@@ -100,13 +105,14 @@ class ActionChains(object):
             self._w3c_actions.key_action.pause()
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                                 Command.CLICK, {'button': 0}))
+            self._add_command(Command.CLICK, {'button': 0})
         return self
 
-    def click_and_hold(self, on_element=None):
-        """
-        Holds down the left mouse button on an element.
+    def click_and_hold(
+        self,
+        on_element = None
+    ):
+        """ Holds down the left mouse button on an element.
 
         :Args:
          - on_element: The element to mouse down.
@@ -118,13 +124,14 @@ class ActionChains(object):
             self._w3c_actions.pointer_action.click_and_hold()
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                                 Command.MOUSE_DOWN, {}))
+            self._add_command(Command.MOUSE_DOWN, {})
         return self
 
-    def context_click(self, on_element=None):
-        """
-        Performs a context-click (right click) on an element.
+    def context_click(
+        self,
+        on_element = None
+    ):
+        """ Performs a context-click (right click) on an element.
 
         :Args:
          - on_element: The element to context-click.
@@ -137,13 +144,14 @@ class ActionChains(object):
             self._w3c_actions.key_action.pause()
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                                 Command.CLICK, {'button': 2}))
+            self._add_command(Command.CLICK, {'button': 2})
         return self
 
-    def double_click(self, on_element=None):
-        """
-        Double-clicks an element.
+    def double_click(
+        self,
+        on_element = None
+    ):
+        """ Double-clicks an element.
 
         :Args:
          - on_element: The element to double-click.
@@ -156,13 +164,15 @@ class ActionChains(object):
             for _ in range(4):
                 self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                                 Command.DOUBLE_CLICK, {}))
+            self._add_command(Command.DOUBLE_CLICK, {})
         return self
 
-    def drag_and_drop(self, source, target):
-        """
-        Holds down the left mouse button on the source element,
+    def drag_and_drop(
+        self,
+        source,
+        target
+    ):
+        """ Holds down the left mouse button on the source element,
            then moves to the target element and releases the mouse button.
 
         :Args:
@@ -173,9 +183,13 @@ class ActionChains(object):
         self.release(target)
         return self
 
-    def drag_and_drop_by_offset(self, source, xoffset, yoffset):
-        """
-        Holds down the left mouse button on the source element,
+    def drag_and_drop_by_offset(
+        self,
+        source,
+        xoffset,
+        yoffset
+    ):
+        """ Holds down the left mouse button on the source element,
            then moves to the target offset and releases the mouse button.
 
         :Args:
@@ -188,9 +202,12 @@ class ActionChains(object):
         self.release()
         return self
 
-    def key_down(self, value, element=None):
-        """
-        Sends a key press only, without releasing it.
+    def key_down(
+        self,
+        value,
+        element = None
+    ):
+        """ Sends a key press only, without releasing it.
            Should only be used with modifier keys (Control, Alt and Shift).
 
         :Args:
@@ -209,14 +226,15 @@ class ActionChains(object):
             self._w3c_actions.key_action.key_down(value)
             self._w3c_actions.pointer_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                Command.SEND_KEYS_TO_ACTIVE_ELEMENT,
-                {"value": keys_to_typing(value)}))
+            self._add_command(Command.SEND_KEYS_TO_ACTIVE_ELEMENT, {'value': keys_to_typing(value)})
         return self
 
-    def key_up(self, value, element=None):
-        """
-        Releases a modifier key.
+    def key_up(
+        self,
+        value,
+        element = None
+    ):
+        """ Releases a modifier key.
 
         :Args:
          - value: The modifier key to send. Values are defined in Keys class.
@@ -234,14 +252,15 @@ class ActionChains(object):
             self._w3c_actions.key_action.key_up(value)
             self._w3c_actions.pointer_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                Command.SEND_KEYS_TO_ACTIVE_ELEMENT,
-                {"value": keys_to_typing(value)}))
+            self._add_command(Command.SEND_KEYS_TO_ACTIVE_ELEMENT, {'value': keys_to_typing(value)})
         return self
 
-    def move_by_offset(self, xoffset, yoffset):
-        """
-        Moving the mouse to an offset from current mouse position.
+    def move_by_offset(
+        self,
+        xoffset,
+        yoffset
+    ):
+        """ Moving the mouse to an offset from current mouse position.
 
         :Args:
          - xoffset: X offset to move to, as a positive or negative integer.
@@ -251,15 +270,14 @@ class ActionChains(object):
             self._w3c_actions.pointer_action.move_by(xoffset, yoffset)
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                Command.MOVE_TO, {
-                    'xoffset': int(xoffset),
-                    'yoffset': int(yoffset)}))
+            self._add_command(Command.MOVE_TO, {'xoffset': int(xoffset), 'yoffset': int(yoffset)})
         return self
 
-    def move_to_element(self, to_element):
-        """
-        Moving the mouse to the middle of an element.
+    def move_to_element(
+        self,
+        to_element
+    ):
+        """ Moving the mouse to the middle of an element.
 
         :Args:
          - to_element: The WebElement to move to.
@@ -268,13 +286,16 @@ class ActionChains(object):
             self._w3c_actions.pointer_action.move_to(to_element)
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(
-                                 Command.MOVE_TO, {'element': to_element.id}))
+            self._add_command(Command.MOVE_TO, {'element': to_element.id})
         return self
 
-    def move_to_element_with_offset(self, to_element, xoffset, yoffset):
-        """
-        Move the mouse by an offset of the specified element.
+    def move_to_element_with_offset(
+        self,
+        to_element,
+        xoffset,
+        yoffset
+    ):
+        """ Move the mouse by an offset of the specified element.
            Offsets are relative to the top-left corner of the element.
 
         :Args:
@@ -286,25 +307,30 @@ class ActionChains(object):
             self._w3c_actions.pointer_action.move_to(to_element, xoffset, yoffset)
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(
-                lambda: self._driver.execute(Command.MOVE_TO, {
+            self._add_command(Command.MOVE_TO, {
                     'element': to_element.id,
                     'xoffset': int(xoffset),
-                    'yoffset': int(yoffset)}))
+                    'yoffset': int(yoffset)
+                })
         return self
 
-    def pause(self, seconds):
+    def pause(
+        self,
+        seconds
+    ):
         """ Pause all inputs for the specified duration in seconds """
         if self._w3c:
             self._w3c_actions.pointer_action.pause(seconds)
             self._w3c_actions.key_action.pause(seconds)
         else:
-            self._actions.append(lambda: time.sleep(seconds))
+            self._actions.append(asyncio.sleep(seconds))
         return self
 
-    def release(self, on_element=None):
-        """
-        Releasing a held mouse button on an element.
+    def release(
+        self,
+        on_element = None
+    ):
+        """ Releasing a held mouse button on an element.
 
         :Args:
          - on_element: The element to mouse up.
@@ -316,12 +342,14 @@ class ActionChains(object):
             self._w3c_actions.pointer_action.release()
             self._w3c_actions.key_action.pause()
         else:
-            self._actions.append(lambda: self._driver.execute(Command.MOUSE_UP, {}))
+            self._add_command(Command.MOUSE_UP, {})
         return self
 
-    def send_keys(self, *keys_to_send):
-        """
-        Sends keys to current focused element.
+    def send_keys(
+        self,
+        *keys_to_send
+    ):
+        """ Sends keys to current focused element.
 
         :Args:
          - keys_to_send: The keys to send.  Modifier keys constants can be found in the
@@ -333,13 +361,15 @@ class ActionChains(object):
                 self.key_down(key)
                 self.key_up(key)
         else:
-            self._actions.append(lambda: self._driver.execute(
-                Command.SEND_KEYS_TO_ACTIVE_ELEMENT, {'value': typing}))
+            self._add_command(Command.SEND_KEYS_TO_ACTIVE_ELEMENT, {'value': typing})
         return self
 
-    def send_keys_to_element(self, element, *keys_to_send):
-        """
-        Sends keys to an element.
+    def send_keys_to_element(
+        self,
+        element,
+        *keys_to_send
+    ):
+        """ Sends keys to an element.
 
         :Args:
          - element: The element to send keys.
@@ -349,10 +379,18 @@ class ActionChains(object):
         self.click(element)
         self.send_keys(*keys_to_send)
         return self
+    
+    def _add_command(
+        self,
+        command,
+        params
+    ):
+        self._actions.append(self._driver.execute(command, params))
 
     # Context manager so ActionChains can be used in a 'with .. as' statements.
-    def __enter__(self):
-        return self  # Return created instance of self.
+    async def __aenter__(self):
+        return self
 
-    def __exit__(self, _type, _value, _traceback):
-        pass  # Do nothing, does not require additional cleanup.
+    async def __aexit__(self, *excinfo):
+        yield
+    

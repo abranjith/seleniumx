@@ -84,7 +84,7 @@ class Action(object):
     """ This class represents a particular action such as key down, move pointer etc. Unfortunately these operations are not
     atomic and this is an attempt to solve some of that.
     For eg - before moving to an element (action), get its co-ordinates from browser (pre-action) and use the return value as params
-    to the action.
+    to the action. So, there could be one or more such pre-actions that need to occur 
     This class also solves for more complex cases such as chaining of multiple pre-actions. With that, user can specify all the
     pre-actions (sync or async) that needs to happen in order where return value from previous action can be passed over to next and so on.
     Since python provides many ways of specifying arguments for a function, it is difficult to cater for all those cases. This class only

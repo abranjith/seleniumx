@@ -15,14 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class BaseOptions(object):
-    """
-    Base class for individual browser options
-    """
-    __metaclass__ = ABCMeta
+class BaseOptions(ABC):
+    """ Base class for individual browser options """
 
     def __init__(self):
         self._caps = self.default_capabilities
@@ -41,7 +38,6 @@ class BaseOptions(object):
         return
 
     @property
-    @abstractmethod
     def default_capabilities(self):
         return {}
 
@@ -49,7 +45,7 @@ class BaseOptions(object):
 class ArgOptions(BaseOptions):
 
     def __init__(self):
-        super(ArgOptions, self).__init__()
+        super().__init__()
         self._arguments = []
 
     @property
@@ -69,7 +65,7 @@ class ArgOptions(BaseOptions):
         if argument:
             self._arguments.append(argument)
         else:
-            raise ValueError('argument can not be null')
+            raise ValueError("argument can not be null")
 
     def to_capabilities(self):
         return self._caps
