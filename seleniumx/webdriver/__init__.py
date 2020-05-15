@@ -29,7 +29,7 @@ from .opera.webdriver import WebDriver as Opera  # noqa
 from .safari.webdriver import WebDriver as Safari  # noqa
 from .blackberry.webdriver import WebDriver as BlackBerry  # noqa
 from .phantomjs.webdriver import WebDriver as PhantomJS  # noqa
-from .android.webdriver import WebDriver as Android  # noqa
+from .android.webdriver import SelendroidDriver as Android  # noqa
 from .webkitgtk.webdriver import WebDriver as WebKitGTK # noqa
 from .webkitgtk.options import Options as WebKitGTKOptions # noqa
 from .wpewebkit.webdriver import WebDriver as WPEWebKit # noqa

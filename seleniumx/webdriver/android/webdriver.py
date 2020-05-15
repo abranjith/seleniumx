@@ -18,25 +18,30 @@
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 
+LOCALHOST = "localhost"
 
-class WebDriver(RemoteWebDriver):
-    """
-    Simple RemoteWebDriver wrapper to start connect to Selendroid's WebView app
+class SelendroidDriver(RemoteWebDriver):
+    """ Simple RemoteWebDriver wrapper to start connect to Selendroid's WebView app
 
     For more info on getting started with Selendroid
     http://selendroid.io/mobileWeb.html
     """
 
-    def __init__(self, host="localhost", port=4444, desired_capabilities=DesiredCapabilities.ANDROID):
-        """
-        Creates a new instance of Selendroid using the WebView app
+    def __init__(
+        self,
+        host = None,
+        port = 4444,
+        desired_capabilities = None,
+        **kwargs
+    ):
+        """ Creates a new instance of Selendroid using the WebView app
 
         :Args:
          - host - location of where selendroid is running
          - port - port that selendroid is running on
          - desired_capabilities: Dictionary object with capabilities
         """
-        RemoteWebDriver.__init__(
-            self,
-            command_executor="http://%s:%d/wd/hub" % (host, port),
-            desired_capabilities=desired_capabilities)
+        host = host or LOCALHOST
+        desired_capabilities = desired_capabilities or DesiredCapabilities.ANDROID
+        server_url = f"http://{host}:{port}/wd/hub"
+        super().__init__(server_url=server_url, desired_capabilities=desired_capabilities, **kwargs)
