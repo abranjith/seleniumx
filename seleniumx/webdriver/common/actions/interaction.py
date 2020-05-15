@@ -59,7 +59,6 @@ class Pause(Interaction):
     def encode(self):
         return {'type': self.PAUSE, 'duration': int(self.duration * 1000)}
 
-
 class TypingInteraction(Interaction):
 
     def __init__(
