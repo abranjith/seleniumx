@@ -18,12 +18,14 @@
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.chromium.options import ChromiumOptions
 
-
-class Options(ChromiumOptions):
+class EdgeOptions(ChromiumOptions):
+    
     KEY = "ms:edgeOptions"
+    CHROMIUM_KEY = "ms:edgeChromium"
+    WEBVIEW = "WebView2"
 
     def __init__(self):
-        super(Options, self).__init__()
+        super().__init__()
         self._use_chromium = False
         self._use_webview = False
 
@@ -44,20 +46,18 @@ class Options(ChromiumOptions):
         self._use_webview = bool(value)
 
     def to_capabilities(self):
-        """
-        Creates a capabilities with all the options that have been set and
+        """ Creates a capabilities with all the options that have been set and
         :Returns: A dictionary with everything
         """
         caps = self._caps
-
         if self._use_chromium:
-            caps = super(Options, self).to_capabilities()
+            caps = super().to_capabilities()
             if self._use_webview:
-                caps['browserName'] = 'WebView2'
+                caps['browserName'] = EdgeOptions.WEBVIEW
         else:
-            caps['platform'] = 'windows'
+            caps['platform'] = "windows"
 
-        caps['ms:edgeChromium'] = self._use_chromium
+        caps[EdgeOptions.CHROMIUM_KEY] = self._use_chromium
         return caps
 
     @property

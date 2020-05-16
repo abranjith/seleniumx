@@ -14,36 +14,40 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-import warnings
-from seleniumx.webdriver.chromium.webdriver import ChromiumDriver
-from .options import Options
-from .service import Service
+
+from seleniumx.webdriver.common.options import BaseOptions
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
+from seleniumx.webdriver.chromium.webdriver import ChromiumDriver
+from seleniumx.webdriver.edge.options import EdgeOptions
+from seleniumx.webdriver.edge.service import EdgeService
 
-
-DEFAULT_PORT = 0
-DEFAULT_SERVICE_LOG_PATH = None
-
-
-class WebDriver(ChromiumDriver):
-    """
-    Controls the Microsoft Edge driver and allows you to drive the browser.
+class EdgeDriver(ChromiumDriver):
+    """ Controls the Microsoft Edge driver and allows you to drive the browser.
     You will need to download either the MicrosoftWebDriver (Legacy)
     or MSEdgeDriver (Chromium) executable from
     https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/
     """
 
-    def __init__(self, executable_path='MicrosoftWebDriver.exe', port=DEFAULT_PORT,
-                 options=None, service_args=None,
-                 capabilities=None, service_log_path=DEFAULT_SERVICE_LOG_PATH,
-                 service=None, keep_alive=False, verbose=False):
-        """
-        Creates a new instance of the edge driver.
+    _VENDOR_PREFIX = "ms"
+    DEFAULT_EXE = "MicrosoftWebDriver"
+    DEFAULT_CHROMIUMBASED_EXE = "msedgedriver"
+
+    def __init__(
+        self, 
+        executable_path : str = None,
+        options : BaseOptions = None, 
+        service_args = None,
+        service_log_path = None,
+        service = None, 
+        keep_alive = False, 
+        verbose = False,
+        **kwargs
+    ):
+        """ Creates a new instance of the edge driver.
         Starts the service and then creates new instance of edge driver.
 
         :Args:
          - executable_path - Deprecated: path to the executable. If the default is used it assumes the executable is in the $PATH
-         - port - Deprecated: port you would like the service to run, if left as 0, a free port will be found.
          - options - this takes an instance of EdgeOptions
          - service_args - Deprecated: List of args to pass to the driver service
          - capabilities - Deprecated: Dictionary object with non-browser specific
@@ -52,20 +56,17 @@ class WebDriver(ChromiumDriver):
          - keep_alive - Whether to configure EdgeRemoteConnection to use HTTP keep-alive.
          - verbose - whether to set verbose logging in the service.
          """
-        if executable_path != 'MicrosoftWebDriver.exe':
-            warnings.warn('executable_path has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
 
+        executable_path = executable_path or EdgeDriver.DEFAULT_EXE
+        options = options or self.create_options()
         if options is not None and options.use_chromium:
-            executable_path = "msedgedriver"
-
+            executable_path = EdgeDriver.DEFAULT_CHROMIUMBASED_EXE
         if service is None:
-            service = Service(executable_path, port, service_args, service_log_path)
-
-        super().__init__(DesiredCapabilities.EDGE['browserName'], "ms",
-                                        port, options,
-                                        service_args, capabilities,
-                                        service_log_path, service, keep_alive)
+            service = EdgeService(executable_path, service_args=service_args,
+                                 log_path=service_log_path, verbose=verbose)
+        browser_name = DesiredCapabilities.EDGE['browserName']
+        super().__init__(browser_name, EdgeDriver._VENDOR_PREFIX, options=options, service_args=service_args,
+                        service=service, keep_alive=keep_alive)
 
     def create_options(self):
-        return Options()
+        return EdgeOptions()

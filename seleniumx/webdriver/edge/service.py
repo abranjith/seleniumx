@@ -15,15 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from seleniumx.webdriver.chromium import service
+from seleniumx.webdriver.chromium.service import ChromiumService
 
+class EdgeService(ChromiumService):
 
-class Service(service.ChromiumService):
-
-    def __init__(self, executable_path, port=0, verbose=False, log_path=None,
-                 service_args=None, env=None):
-        """
-        Creates a new instance of the EdgeDriver service.
+    def __init__(
+      self,
+      executable_path : str,
+      port : int = 0, 
+      service_args : list = None, 
+      log_path : str = None,
+      env : dict= None,
+      verbose : bool = False
+      ):
+        """ Creates a new instance of the EdgeDriver service.
         EdgeDriver provides an interface for Microsoft WebDriver to use
         with Microsoft Edge.
 
@@ -37,14 +42,8 @@ class Service(service.ChromiumService):
          - service_args : List of args to pass to the WebDriver service.
         """
         self.service_args = service_args or []
-
         if verbose:
             self.service_args.append("--verbose")
 
-        super(Service, self).__init__(
-            executable_path,
-            port,
-            service_args,
-            log_path,
-            env,
-            "Please download from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/")
+        super().__init__(executable_path, port=port, service_args=service_args, log_path=log_path, env=env,
+            start_error_message="Please download from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/")
