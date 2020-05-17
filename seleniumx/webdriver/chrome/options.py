@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from seleniumx.webdriver.chromium.options import ChromiumOptions
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
+from seleniumx.webdriver.chromium.options import ChromiumOptions
 
 class ChromeOptions(ChromiumOptions):
 

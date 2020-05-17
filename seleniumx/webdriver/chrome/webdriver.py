@@ -17,11 +17,11 @@
 
 import warnings
 
-from seleniumx.webdriver.chromium.webdriver import ChromiumDriver
+from seleniumx.webdriver.common.service import Service
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
+from seleniumx.webdriver.chromium.webdriver import ChromiumDriver
 from seleniumx.webdriver.chrome.options import ChromeOptions
 from seleniumx.webdriver.chrome.service import ChromeDriverService
-from seleniumx.webdriver.common.service import Service
 from seleniumx.webdriver.common.options import BaseOptions
 
 class ChromeDriver(ChromiumDriver):

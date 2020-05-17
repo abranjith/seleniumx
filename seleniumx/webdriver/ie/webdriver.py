@@ -18,32 +18,32 @@
 import warnings
 
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
-from .service import Service
-from .options import Options
+from seleniumx.webdriver.ie.service import IEDriverService
+from seleniumx.webdriver.ie.options import IEOptions
 
-DEFAULT_TIMEOUT = 30
-DEFAULT_PORT = 0
-DEFAULT_HOST = None
-DEFAULT_LOG_LEVEL = None
-DEFAULT_SERVICE_LOG_PATH = None
-
-
-class WebDriver(RemoteWebDriver):
+class IEDriver(RemoteWebDriver):
     """ Controls the IEServerDriver and allows you to drive Internet Explorer """
 
-    def __init__(self, executable_path='IEDriverServer.exe', capabilities=None,
-                 port=DEFAULT_PORT, timeout=DEFAULT_TIMEOUT, host=DEFAULT_HOST,
-                 log_level=DEFAULT_LOG_LEVEL, service_log_path=DEFAULT_SERVICE_LOG_PATH,
-                 options=None, service=None,
-                 desired_capabilities=None, keep_alive=False):
-        """
-        Creates a new instance of the Ie driver.
+    _VENDOR_PREFIX = "goog"
+    DEFAULT_EXE = "IEDriverServer.exe"
+
+    def __init__(
+        self,
+        executable_path = None,
+        host = None,
+        log_level = None,
+        service_log_path = None,
+        options = None,
+        service = None,
+        keep_alive = False,
+        **kwargs
+    ):
+        """ Creates a new instance of the Ie driver.
 
         Starts the service and then creates new instance of Ie driver.
 
         :Args:
          - executable_path - Deprecated: path to the executable. If the default is used it assumes the executable is in the $PATH
-         - capabilities - Deprecated: capabilities Dictionary object
          - port - Deprecated: port you would like the service to run, if left as 0, a free port will be found.
          - timeout - Deprecated: no longer used, kept for backward compatibility
          - host - Deprecated: IP address for the service
@@ -53,65 +53,31 @@ class WebDriver(RemoteWebDriver):
          - desired_capabilities - Deprecated: alias of capabilities; this will make the signature consistent with RemoteWebDriver.
          - keep_alive - Whether to configure RemoteConnection to use HTTP keep-alive.
         """
-        if executable_path != 'IEDriverServer.exe':
-            warnings.warn('executable_path has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        if capabilities is not None:
-            warnings.warn('capabilities has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        if port != DEFAULT_PORT:
-            warnings.warn('port has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        self.port = port
-        if timeout != DEFAULT_TIMEOUT:
-            warnings.warn('timeout has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        if host != DEFAULT_HOST:
-            warnings.warn('host has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
+        executable_path = executable_path or IEDriver.DEFAULT_EXE
         self.host = host
-        if log_level != DEFAULT_LOG_LEVEL:
-            warnings.warn('log_level has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        if service_log_path != DEFAULT_SERVICE_LOG_PATH:
-            warnings.warn('service_log_path has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
+        options = options or self.create_options()
+        self.service = service
+        if self.service is None:
+            self.service = IEDriverService(executable_path, host=self.host, log_level=log_level,
+                                log_file=service_log_path)
 
-        # If both capabilities and desired capabilities are set, ignore desired capabilities.
-        if capabilities is None and desired_capabilities:
-            capabilities = desired_capabilities
-
-        if options is None:
-            if capabilities is None:
-                capabilities = self.create_options().to_capabilities()
-        else:
-            if capabilities is None:
-                capabilities = options.to_capabilities()
-            else:
-                # desired_capabilities stays as passed in
-                capabilities.update(options.to_capabilities())
-        if service is not None:
-            self.iedriver = service
-        else:
-            self.iedriver = Service(
-                executable_path,
-                port=self.port,
-                host=self.host,
-                log_level=log_level,
-                log_file=service_log_path)
-
-        self.iedriver.start()
-
-        RemoteWebDriver.__init__(
-            self,
-            command_executor=self.iedriver.service_url,
-            desired_capabilities=capabilities,
-            keep_alive=keep_alive)
+        super().__init__(options=options, keep_alive=keep_alive, **kwargs)
         self._is_remote = False
+    
+    async def start_service(self):
+        await self.service.start()
+        self.server_url = self.service.service_url
 
-    def quit(self):
-        RemoteWebDriver.quit(self)
-        self.iedriver.stop()
+    async def quit(self):
+        """ Closes the browser and shuts down the IEDriverServer executable
+        that was started when starting the IEDriverServer
+        """
+        try:
+            await super().quit()
+        except Exception as ex:
+            warnings.warn(f"Something went wrong issuing quit request to server. Details - {str(ex)}")
+        finally:
+            await self.service.stop()
 
     def create_options(self):
-        return Options()
+        return IEOptions()

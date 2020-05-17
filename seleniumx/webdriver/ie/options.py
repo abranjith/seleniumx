@@ -14,16 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.common.options import ArgOptions
-
 
 class ElementScrollBehavior(object):
     TOP = 0
     BOTTOM = 1
 
 
-class Options(ArgOptions):
+class IEOptions(ArgOptions):
 
     KEY = 'se:ieOptions'
     SWITCHES = 'ie.browserCommandLineSwitches'
@@ -45,7 +45,7 @@ class Options(ArgOptions):
     VALIDATE_COOKIE_DOCUMENT_TYPE = 'ie.validateCookieDocumentType'
 
     def __init__(self):
-        super(Options, self).__init__()
+        super().__init__()
         self._options = {}
         self._additional = {}
 
@@ -56,40 +56,36 @@ class Options(ArgOptions):
 
     @property
     def browser_attach_timeout(self):
-        """
-        :Returns: The options Browser Attach Timeout in milliseconds
-        """
+        """ :Returns: The options Browser Attach Timeout in milliseconds """
         return self._options.get(self.BROWSER_ATTACH_TIMEOUT)
 
     @browser_attach_timeout.setter
     def browser_attach_timeout(self, value):
-        """
-        Sets the options Browser Attach Timeout
+        """ Sets the options Browser Attach Timeout
 
         :Args:
          - value: Timeout in milliseconds
 
         """
         if not isinstance(value, int):
-            raise ValueError('Browser Attach Timeout must be an integer.')
+            raise ValueError("Browser Attach Timeout must be an integer.")
         self._options[self.BROWSER_ATTACH_TIMEOUT] = value
 
     @property
     def element_scroll_behavior(self):
-        """:Returns: The options Element Scroll Behavior value """
+        """ :Returns: The options Element Scroll Behavior value """
         return self._options.get(self.ELEMENT_SCROLL_BEHAVIOR)
 
     @element_scroll_behavior.setter
     def element_scroll_behavior(self, value):
-        """
-        Sets the options Element Scroll Behavior
+        """ Sets the options Element Scroll Behavior
 
         :Args:
          - value: 0 - Top, 1 - Bottom
 
         """
         if value not in [ElementScrollBehavior.TOP, ElementScrollBehavior.BOTTOM]:
-            raise ValueError('Element Scroll Behavior out of range.')
+            raise ValueError("Element Scroll Behavior out of range.")
         self._options[self.ELEMENT_SCROLL_BEHAVIOR] = value
 
     @property
@@ -110,7 +106,7 @@ class Options(ArgOptions):
 
     @property
     def file_upload_dialog_timeout(self):
-        """:Returns: The options File Upload Dialog Timeout in milliseconds """
+        """ :Returns: The options File Upload Dialog Timeout in milliseconds """
         return self._options.get(self.FILE_UPLOAD_DIALOG_TIMEOUT)
 
     @file_upload_dialog_timeout.setter
@@ -123,7 +119,7 @@ class Options(ArgOptions):
 
         """
         if not isinstance(value, int):
-            raise ValueError('File Upload Dialog Timeout must be an integer.')
+            raise ValueError("File Upload Dialog Timeout must be an integer.")
         self._options[self.FILE_UPLOAD_DIALOG_TIMEOUT] = value
 
     @property
@@ -324,13 +320,11 @@ class Options(ArgOptions):
 
         opts = self._options.copy()
         if len(self._arguments) > 0:
-            opts[self.SWITCHES] = ' '.join(self._arguments)
-
+            opts[self.SWITCHES] = " ".join(self._arguments)
         if len(self._additional) > 0:
             opts.update(self._additional)
-
         if len(opts) > 0:
-            caps[Options.KEY] = opts
+            caps[IEOptions.KEY] = opts
         return caps
 
     @property

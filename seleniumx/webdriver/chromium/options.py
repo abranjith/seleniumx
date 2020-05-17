@@ -18,14 +18,18 @@
 import os
 import base64
 
+import aiofiles
+from async_property import async_property
+
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.common.options import ArgOptions
 
 class ChromiumOptions(ArgOptions):
+    
     KEY = "goog:chromeOptions"
 
     def __init__(self):
-        super(ChromiumOptions, self).__init__()
+        super().__init__()
         self._binary_location = ""
         self._extension_files = []
         self._extensions = []
@@ -66,17 +70,17 @@ class ChromiumOptions(ArgOptions):
         """
         self._debugger_address = value
 
-    #TODO - this can be made async
-    @property
-    def extensions(self):
+    @async_property
+    async def extensions(self):
         """ :Returns: A list of encoded extensions that will be loaded """
         encoded_extensions = []
         for ext in self._extension_files:
             # Should not use base64.encodestring() which inserts newlines every
             # 76 characters (per RFC 1521).  Chromedriver has to remove those
             # unnecessary newlines before decoding, causing performance hit.
-            with open(ext, "rb") as fd:
-                encoded_str = base64.b64encode(fd.read()).decode("UTF-8")
+            async with aiofiles.open(ext, "rb") as fd:
+                content = await fd.read()
+                encoded_str = base64.b64encode(content).decode("UTF-8")
                 encoded_extensions.append(encoded_str)
         return encoded_extensions + self._extensions
 

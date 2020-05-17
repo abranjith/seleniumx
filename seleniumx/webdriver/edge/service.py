@@ -44,6 +44,5 @@ class EdgeService(ChromiumService):
         self.service_args = service_args or []
         if verbose:
             self.service_args.append("--verbose")
-
         super().__init__(executable_path, port=port, service_args=service_args, log_path=log_path, env=env,
             start_error_message="Please download from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/")

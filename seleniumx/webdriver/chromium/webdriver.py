@@ -148,12 +148,11 @@ class ChromiumDriver(RemoteWebDriver):
 
     async def quit(self):
         """ Closes the browser and shuts down the ChromiumDriver executable
-        that is started when starting the ChromiumDriver
+        that was started when starting the ChromiumDriver
         """
         try:
             await super().quit()
-        except Exception:
-            # We don't care about the message because something probably has gone wrong
-            pass
+        except Exception as ex:
+            warnings.warn(f"Something went wrong issuing quit request to server. Details - {str(ex)}")
         finally:
             await self.service.stop()

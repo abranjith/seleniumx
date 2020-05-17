@@ -801,7 +801,7 @@ class RemoteWebDriver(_BaseDriver):
                           "type. It should end with a `.png` extension", UserWarning)
         png_file = await self.get_screenshot_as_png()
         try:
-            async with open(filename, mode="wb") as fd:
+            async with aiofiles.open(filename, mode="wb") as fd:
                 await fd.write(png_file)
         except IOError:
             return False

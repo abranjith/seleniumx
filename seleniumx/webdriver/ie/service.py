@@ -15,17 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from seleniumx.webdriver.common import service
+from seleniumx.webdriver.common.service import Service
 
 
-class Service(service.Service):
+class IEDriverService(Service):
     """
     Object that manages the starting and stopping of the IEDriver
     """
 
-    def __init__(self, executable_path, port=0, host=None, log_level=None, log_file=None):
-        """
-        Creates a new instance of the Service
+    def __init__(
+        self,
+        executable_path : str,
+        port : int = 0,
+        host : str = None,
+        log_level : int = None,
+        log_file : str = None
+    ):
+        """ Creates a new instance of the Service
 
         :Args:
          - executable_path : Path to the IEDriver
@@ -37,14 +43,14 @@ class Service(service.Service):
            Default is "stdout"."""
         self.service_args = []
         if host is not None:
-            self.service_args.append("--host=%s" % host)
+            self.service_args.append(f"--host={host}")
         if log_level is not None:
-            self.service_args.append("--log-level=%s" % log_level)
+            self.service_args.append(f"--log-level={log_level}")
         if log_file is not None:
-            self.service_args.append("--log-file=%s" % log_file)
+            self.service_args.append(f"--log-file={log_file}")
 
-        service.Service.__init__(self, executable_path, port=port,
-                                 start_error_message="Please download from http://selenium-release.storage.googleapis.com/index.html and read up at https://github.com/SeleniumHQ/selenium/wiki/InternetExplorerDriver")
+        super().__init__(executable_path, port=port,
+                        start_error_message="Please download from http://selenium-release.storage.googleapis.com/index.html and read up at https://github.com/SeleniumHQ/selenium/wiki/InternetExplorerDriver")
 
     def command_line_args(self):
-        return ["--port=%d" % self.port] + self.service_args
+        return [f"--port={self.port}"] + self.service_args
