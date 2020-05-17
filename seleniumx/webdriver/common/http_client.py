@@ -29,15 +29,12 @@ class HttpClient(_BaseClient):
     
     @property
     def base_url(self):
-        if self._client:
-            url = self._client.base_url
-            if isinstance(url, httpx.URL):
-                return str(url)
-            return url
+        return self._base_url
     
     @base_url.setter
     def base_url(self, url):
         if url is not None:
+            self._base_url = url
             self._client.base_url = httpx.URL(url)
     
     async def get(
