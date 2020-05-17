@@ -64,7 +64,6 @@ class HttpExecutor(object):
         }
         if self._keep_alive:
             headers['Connection'] = "keep-alive"
-        
         if additional_headers:
             headers.update(additional_headers)
 
@@ -119,7 +118,7 @@ class HttpExecutor(object):
         response = self._response_wrapper.wrap_web_element(self._webdriver, response, self._w3c)
         return response
     
-    #closes any underlying connections & pools
+    #closes any underlying connections & pool
     async def close(self):
         if self._http_client:
             await self._http_client.close()
