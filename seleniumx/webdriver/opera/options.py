@@ -18,15 +18,16 @@
 from seleniumx.webdriver.chrome.options import ChromeOptions
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 
+class OperaOptions(ChromeOptions):
 
-class Options(ChromeOptions):
     KEY = "operaOptions"
+    LOAD_STRATEGY = ["normal", "eager", "none"] 
 
     def __init__(self):
-        ChromeOptions.__init__(self)
-        self._android_package_name = ''
-        self._android_device_socket = ''
-        self._android_command_line_file = ''
+        super().__init__()
+        self._android_package_name = ""
+        self._android_device_socket = ""
+        self._android_command_line_file = ""
 
     @property
     def android_package_name(self):
@@ -81,40 +82,37 @@ class Options(ChromeOptions):
 
     @property
     def page_load_strategy(self):
-        return self._caps["pageLoadStrategy"]
+        return self._caps['pageLoadStrategy']
 
     @page_load_strategy.setter
     def page_load_strategy(self, strategy):
-        if strategy in ["normal", "eager", "none"]:
+        if strategy in OperaOptions.LOAD_STRATEGY:
             self.set_capability("pageLoadStrategy", strategy)
         else:
-            raise ValueError("Strategy can only be one of the following: normal, eager, none")
+            raise ValueError(f"Strategy can only be one of the following: {', '.join(OperaOptions.LOAD_STRATEGY)}")
 
     def to_capabilities(self):
-        """
-        Creates a capabilities with all the options that have been set and
+        """ Creates a capabilities with all the options that have been set and
         returns a dictionary with everything
         """
-        capabilities = ChromeOptions.to_capabilities(self)
+        capabilities = super().to_capabilities()
         capabilities.update(self._caps)
         opera_options = capabilities[self.KEY]
 
         if self.android_package_name:
-            opera_options["androidPackage"] = self.android_package_name
+            opera_options['androidPackage'] = self.android_package_name
         if self.android_device_socket:
-            opera_options["androidDeviceSocket"] = self.android_device_socket
+            opera_options['androidDeviceSocket'] = self.android_device_socket
         if self.android_command_line_file:
-            opera_options["androidCommandLineFile"] = \
-                self.android_command_line_file
+            opera_options['androidCommandLineFile'] = self.android_command_line_file
         return capabilities
 
     @property
     def default_capabilities(self):
         return DesiredCapabilities.OPERA.copy()
 
-
-class AndroidOptions(Options):
+class AndroidOptions(OperaOptions):
 
     def __init__(self):
-        Options.__init__(self)
-        self.android_package_name = 'com.opera.browser'
+        super().__init__()
+        self.android_package_name = "com.opera.browser"
