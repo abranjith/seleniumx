@@ -169,6 +169,11 @@ class Command(object):
     SET_SINK_TO_USE = "setSinkToUse"
     START_TAB_MIRRORING = "startTabMirroring"
     STOP_CASTING = "stopCasting"
+
+    #Safari
+    GET_PERMISSIONS = "GET_PERMISSIONS"
+    SET_PERMISSIONS = "SET_PERMISSIONS"
+    ATTACH_DEBUGGER = "ATTACH_DEBUGGER"
     
 @unique
 class HttpMethod(Enum):

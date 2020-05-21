@@ -15,14 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-The Permission implementation.
-"""
-
-
 class Permission(object):
-    """
-    Set of supported permissions.
-    """
+    """ Set of supported permissions. """
 
     GET_USER_MEDIA = "getUserMedia"

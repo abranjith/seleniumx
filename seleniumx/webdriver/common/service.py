@@ -19,6 +19,7 @@ import os
 import platform
 import errno
 import warnings
+import inspect
 import asyncio
 from asyncio.subprocess import PIPE
 
@@ -46,6 +47,7 @@ class Service(object):
     ):
         self.path = executable
         self.port = port
+        self._service_url = None
 
         if not _HAS_NATIVE_DEVNULL and log_file == DEVNULL:
             #ignores anything directed to this
@@ -58,7 +60,13 @@ class Service(object):
     @property
     def service_url(self):
         """ Gets the url of the Service """
-        return HttpUtils.get_url(LOCALHOST, "", port=self.port)
+        self._service_url = HttpUtils.get_url(LOCALHOST, "", port=self.port)
+        return self._service_url
+    
+    @service_url.setter
+    def service_url(self, url):
+        if url is not None:
+            self._service_url = url
     
     async def __aenter__(self):
         return self

@@ -14,31 +14,33 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+import warnings
+
+from seleniumx.webdriver.common.enums import Command
 from seleniumx.common.exceptions import WebDriverException
-
-try:
-    import http.client as http_client
-except ImportError:
-    import httplib as http_client
-
+from seleniumx.webdriver.common.service import Service
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
-from .service import Service
-from .remote_connection import SafariRemoteConnection
+from seleniumx.webdriver.safari.service import SafariDriverService
+from seleniumx.webdriver.safari.command_codec import SafariCommandCodec
 
+class SafariDriver(RemoteWebDriver):
+    """ Controls the SafariDriver and allows you to drive the browser. """
+    DEFAULT_EXE = "/usr/bin/safaridriver"
 
-class WebDriver(RemoteWebDriver):
-    """
-    Controls the SafariDriver and allows you to drive the browser.
-
-    """
-
-    def __init__(self, port=0, executable_path="/usr/bin/safaridriver", reuse_service=False,
-                 desired_capabilities=DesiredCapabilities.SAFARI, quiet=False,
-                 keep_alive=True, service_args=None):
-        """
-
-        Creates a new Safari driver instance and launches or finds a running safaridriver service.
+    def __init__(
+        self,
+        port = 0,
+        executable_path = None, 
+        service : Service = None,
+        desired_capabilities = None,
+        quiet = False,
+        keep_alive = True,
+        service_args = None,
+        **kwargs    
+    ):
+        """ Creates a new Safari driver instance and launches or finds a running safaridriver service.
 
         :Args:
          - port - The port on which the safaridriver service should listen for new connections. If zero, a free port will be found.
@@ -51,63 +53,54 @@ class WebDriver(RemoteWebDriver):
          - service_args : List of args to pass to the safaridriver service
         """
 
-        self._reuse_service = reuse_service
-        self.service = Service(executable_path, port=port, quiet=quiet, service_args=service_args)
-        if not reuse_service:
-            self.service.start()
-
-        executor = SafariRemoteConnection(remote_server_addr=self.service.service_url,
-                                          keep_alive=keep_alive)
-
-        RemoteWebDriver.__init__(
-            self,
-            command_executor=executor,
-            desired_capabilities=desired_capabilities)
-
+        executable_path = executable_path or SafariDriver.DEFAULT_EXE
+        desired_capabilities = DesiredCapabilities.SAFARI.copy()
+        if service is None:
+            service = SafariDriverService(executable_path, port=port, service_args=service_args, quiet=quiet)
+        self.service = service
+        browser_name = DesiredCapabilities.SAFARI['browserName']
+        command_codec = SafariCommandCodec(browser_name)
+        super().__init__(command_codec=command_codec, desired_capabilities=desired_capabilities, keep_alive=keep_alive, **kwargs)
         self._is_remote = False
-
-    def quit(self):
-        """
-        Closes the browser and shuts down the SafariDriver executable
-        that is started when starting the SafariDriver
+    
+    async def start_service(self):
+        await self.service.start()
+        self.server_url = self.service.service_url
+    
+    async def quit(self):
+        """ Closes the browser and shuts down the Driver service
         """
         try:
-            RemoteWebDriver.quit(self)
-        except http_client.BadStatusLine:
-            pass
+            await super().quit()
+        except Exception as ex:
+            warnings.warn(f"Something went wrong issuing quit request to server. Details - {str(ex)}")
         finally:
-            if not self._reuse_service:
-                self.service.stop()
+            await self.service.stop()
 
     # safaridriver extension commands. The canonical command support matrix is here:
     # https://developer.apple.com/library/content/documentation/NetworkingInternetWeb/Conceptual/WebDriverEndpointDoc/Commands/Commands.html
-
     # First available in Safari 11.1 and Safari Technology Preview 41.
-    def set_permission(self, permission, value):
+    async def set_permission(self, permission, value):
         if not isinstance(value, bool):
             raise WebDriverException("Value of a session permission must be set to True or False.")
 
         payload = {}
         payload[permission] = value
-        self.execute("SET_PERMISSIONS", {"permissions": payload})
+        await self.execute(Command.SET_PERMISSIONS, {'permissions': payload})
 
     # First available in Safari 11.1 and Safari Technology Preview 41.
-    def get_permission(self, permission):
-        payload = self.execute("GET_PERMISSIONS")["value"]
-        permissions = payload["permissions"]
-        if not permissions:
+    async def get_permission(self, permission):
+        response = await self.execute(Command.GET_PERMISSIONS)
+        response = response['value']
+        permissions = response.get('permissions')
+        if not (permissions and permission in permissions):
             return None
-
-        if permission not in permissions:
-            return None
-
         value = permissions[permission]
         if not isinstance(value, bool):
             return None
-
         return value
 
     # First available in Safari 11.1 and Safari Technology Preview 42.
-    def debug(self):
-        self.execute("ATTACH_DEBUGGER")
-        self.execute_script("debugger;")
+    async def debug(self):
+        await self.execute(Command.ATTACH_DEBUGGER)
+        await self.execute_script("debugger;")

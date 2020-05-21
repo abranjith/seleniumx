@@ -16,18 +16,23 @@
 # under the License.
 
 import os
-from seleniumx.webdriver.common import service, utils
-from subprocess import PIPE
+from asyncio.subprocess import PIPE
 
+from seleniumx.common.exceptions import WebDriverException
+from seleniumx.webdriver.common.service import Service
+from seleniumx.webdriver.common import utils
 
-class Service(service.Service):
-    """
-    Object that manages the starting and stopping of the SafariDriver
-    """
+class SafariDriverService(Service):
+    """ Object that manages the starting and stopping of the SafariDriver """
 
-    def __init__(self, executable_path, port=0, quiet=False, service_args=None):
-        """
-        Creates a new instance of the Service
+    def __init__(
+        self,
+        executable_path : str,
+        port : int = 0,
+        quiet : bool = False,
+        service_args : list = None
+    ):
+        """ Creates a new instance of the Service
 
         :Args:
          - executable_path : Path to the SafariDriver
@@ -40,25 +45,19 @@ class Service(service.Service):
                 message = "Safari Technology Preview does not seem to be installed. You can download it at https://developer.apple.com/safari/download/."
             else:
                 message = "SafariDriver was not found; are you running Safari 10 or later? You can download Safari at https://developer.apple.com/safari/download/."
-            raise Exception(message)
-
-        if port == 0:
-            port = utils.free_port()
+            raise WebDriverException(message)
 
         self.service_args = service_args or []
-
         self.quiet = quiet
-        log = PIPE
+        log_file = PIPE
         if quiet:
-            log = open(os.devnull, 'w')
-        service.Service.__init__(self, executable_path, port, log)
+            log_file = open(os.devnull, "wb")
+        super().__init__(executable_path, port, log_file)
 
     def command_line_args(self):
-        return ["-p", "%s" % self.port] + self.service_args
+        return ["-p", f"{self.port}"] + self.service_args
 
     @property
     def service_url(self):
-        """
-        Gets the url of the SafariDriver Service
-        """
-        return "http://localhost:%d" % self.port
+        """ Gets the url of the SafariDriver Service """
+        return f"http://localhost:{self.port}"

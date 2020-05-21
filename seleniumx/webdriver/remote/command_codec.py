@@ -1,6 +1,7 @@
 from seleniumx.webdriver.common.enums import HttpMethod, Command
 from seleniumx.webdriver.remote.command import CommandInfo
 
+#TODO - browser_name probably doesnt belong here
 class CommandCodec(object):
     """ This holds mapping between commands and corresponding http method and url. Some of the design inspirations are taken from java counterpart
     NOTE - whenever there is an update on command, this class needs to be kept up to date. See https://w3c.github.io/webdriver/#endpoints for details

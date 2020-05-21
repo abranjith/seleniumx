@@ -17,7 +17,6 @@
 
 from seleniumx.webdriver.common.service import Service
 
-
 class IEDriverService(Service):
     """
     Object that manages the starting and stopping of the IEDriver

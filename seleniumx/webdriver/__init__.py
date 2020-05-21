@@ -26,8 +26,7 @@ from .edge.webdriver import EdgeDriver as Edge  # noqa
 from .edge.webdriver import EdgeDriver as ChromiumEdge  # noqa
 from .edge.options import EdgeOptions as EdgeOptions # noqa
 from .opera.webdriver import OperaDriver as Opera  # noqa
-from .safari.webdriver import WebDriver as Safari  # noqa
-from .phantomjs.webdriver import WebDriver as PhantomJS  # noqa
+from .safari.webdriver import SafariDriver as Safari  # noqa
 from .android.webdriver import SelendroidDriver as Android  # noqa
 from .webkitgtk.webdriver import WebDriver as WebKitGTK # noqa
 from .webkitgtk.options import Options as WebKitGTKOptions # noqa
