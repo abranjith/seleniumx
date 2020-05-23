@@ -15,24 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-try:
-    import http.client as http_client
-except ImportError:
-    import httplib as http_client
+import warnings
 
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
-from .service import Service
-from .options import Options
+from seleniumx.webdriver.webkitgtk.service import WebKitGtkDriverService
+from seleniumx.webdriver.webkitgtk.options import WebKitGtkOptions
+from seleniumx.webdriver.common.options import BaseOptions
 
+# TODO
+# desired_capabilities is required ?
+class WebKitGtkDriver(RemoteWebDriver):
+    """ Controls the WebKitGTKDriver and allows you to drive the browser. """
 
-class WebDriver(RemoteWebDriver):
-    """
-    Controls the WebKitGTKDriver and allows you to drive the browser.
-    """
+    DEFAULT_EXE = "WebKitWebDriver"
 
-    def __init__(self, executable_path="WebKitWebDriver", port=0, options=None,
-                 desired_capabilities=None,
-                 service_log_path=None, keep_alive=False):
+    def __init__(
+        self,
+        executable_path : str = None,
+        port : int = 0,
+        options : BaseOptions = None,
+        desired_capabilities = None,
+        service_log_path = None,
+        keep_alive = False,
+        **kwargs
+    ):
         """
         Creates a new instance of the WebKitGTK driver.
 
@@ -46,33 +52,26 @@ class WebDriver(RemoteWebDriver):
          - service_log_path : Path to write service stdout and stderr output.
          - keep_alive : Whether to configure RemoteConnection to use HTTP keep-alive.
         """
-        if options is None:
-            if desired_capabilities is None:
-                desired_capabilities = Options().to_capabilities()
-        else:
-            capabilities = options.to_capabilities()
-            if desired_capabilities is not None:
-                capabilities.update(desired_capabilities)
-            desired_capabilities = capabilities
+        desired_capabilities = desired_capabilities or {}
+        if options:
+            desired_capabilities.update(options.to_capabilities())
 
-        self.service = Service(executable_path, port=port, log_path=service_log_path)
-        self.service.start()
+        self.service = WebKitGtkDriverService(executable_path, port=port, log_path=service_log_path)
 
-        RemoteWebDriver.__init__(
-            self,
-            command_executor=self.service.service_url,
-            desired_capabilities=desired_capabilities,
-            keep_alive=keep_alive)
+        super().__init__(desired_capabilities=desired_capabilities, keep_alive=keep_alive, **kwargs)
         self._is_remote = False
-
-    def quit(self):
-        """
-        Closes the browser and shuts down the WebKitGTKDriver executable
-        that is started when starting the WebKitGTKDriver
+    
+    async def start_service(self):
+        await self.service.start()
+        self.server_url = self.service.service_url
+    
+    async def quit(self):
+        """ Closes the browser and shuts down the WebKitGTKDriver executable
+        that was started when starting the WebKitGTKDriver
         """
         try:
-            RemoteWebDriver.quit(self)
-        except http_client.BadStatusLine:
-            pass
+            await super().quit()
+        except Exception as ex:
+            warnings.warn(f"Something went wrong issuing quit request to server. Details - {str(ex)}")
         finally:
-            self.service.stop()
+            await self.service.stop()

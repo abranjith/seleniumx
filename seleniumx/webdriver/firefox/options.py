@@ -173,7 +173,7 @@ class Options(ArgOptions):
         opts.update(self.log.to_capabilities())
 
         if len(opts) > 0:
-            caps[Options.KEY] = opts
+            caps[self.KEY] = opts
 
         return caps
 

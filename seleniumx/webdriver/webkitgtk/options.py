@@ -18,13 +18,14 @@
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.common.options import ArgOptions
 
+class WebKitGtkOptions(ArgOptions):
 
-class Options(ArgOptions):
-    KEY = 'webkitgtk:browserOptions'
+    KEY = "webkitgtk:browserOptions"
+    LOAD_STRATEGY = ["normal", "eager", "none"] 
 
     def __init__(self):
-        super(Options, self).__init__()
-        self._binary_location = ''
+        super().__init__()
+        self._binary_location = ""
         self._overlay_scrollbars_enabled = True
 
     @property
@@ -63,14 +64,14 @@ class Options(ArgOptions):
 
     @property
     def page_load_strategy(self):
-        return self._caps["pageLoadStrategy"]
+        return self._caps['pageLoadStrategy']
 
     @page_load_strategy.setter
     def page_load_strategy(self, strategy):
-        if strategy in ["normal", "eager", "none"]:
+        if strategy in WebKitGtkOptions.LOAD_STRATEGY:
             self.set_capability("pageLoadStrategy", strategy)
         else:
-            raise ValueError("Strategy can only be one of the following: normal, eager, none")
+            raise ValueError(f"Strategy can only be one of the following: {', '.join(WebKitGtkOptions.LOAD_STRATEGY)}")
 
     def to_capabilities(self):
         """
@@ -78,16 +79,15 @@ class Options(ArgOptions):
         returns a dictionary with everything
         """
         caps = self._caps
-
+        
         browser_options = {}
         if self.binary_location:
-            browser_options["binary"] = self.binary_location
+            browser_options['binary'] = self.binary_location
         if self.arguments:
-            browser_options["args"] = self.arguments
-        browser_options["useOverlayScrollbars"] = self.overlay_scrollbars_enabled
-
-        caps[Options.KEY] = browser_options
-
+            browser_options['args'] = self.arguments
+        browser_options['useOverlayScrollbars'] = self.overlay_scrollbars_enabled
+        caps[self.KEY] = browser_options
+        
         return caps
 
     @property

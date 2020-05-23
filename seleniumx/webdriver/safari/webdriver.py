@@ -27,6 +27,7 @@ from seleniumx.webdriver.safari.command_codec import SafariCommandCodec
 
 class SafariDriver(RemoteWebDriver):
     """ Controls the SafariDriver and allows you to drive the browser. """
+    
     DEFAULT_EXE = "/usr/bin/safaridriver"
 
     def __init__(
@@ -83,7 +84,6 @@ class SafariDriver(RemoteWebDriver):
     async def set_permission(self, permission, value):
         if not isinstance(value, bool):
             raise WebDriverException("Value of a session permission must be set to True or False.")
-
         payload = {}
         payload[permission] = value
         await self.execute(Command.SET_PERMISSIONS, {'permissions': payload})

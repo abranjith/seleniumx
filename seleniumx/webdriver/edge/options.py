@@ -57,7 +57,7 @@ class EdgeOptions(ChromiumOptions):
         else:
             caps['platform'] = "windows"
 
-        caps[EdgeOptions.CHROMIUM_KEY] = self._use_chromium
+        caps[self.CHROMIUM_KEY] = self._use_chromium
         return caps
 
     @property

@@ -95,17 +95,18 @@ class OperaOptions(ChromeOptions):
         """ Creates a capabilities with all the options that have been set and
         returns a dictionary with everything
         """
-        capabilities = super().to_capabilities()
-        capabilities.update(self._caps)
-        opera_options = capabilities[self.KEY]
-
+        caps = super().to_capabilities() or self._caps
+        
+        opera_options = caps.get(self.KEY) or {}
         if self.android_package_name:
             opera_options['androidPackage'] = self.android_package_name
         if self.android_device_socket:
             opera_options['androidDeviceSocket'] = self.android_device_socket
         if self.android_command_line_file:
             opera_options['androidCommandLineFile'] = self.android_command_line_file
-        return capabilities
+        caps[self.KEY] = opera_options
+
+        return caps
 
     @property
     def default_capabilities(self):

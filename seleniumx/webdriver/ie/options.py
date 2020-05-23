@@ -324,7 +324,7 @@ class IEOptions(ArgOptions):
         if len(self._additional) > 0:
             opts.update(self._additional)
         if len(opts) > 0:
-            caps[IEOptions.KEY] = opts
+            caps[self.KEY] = opts
         return caps
 
     @property

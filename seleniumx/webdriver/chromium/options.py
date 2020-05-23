@@ -175,9 +175,9 @@ class ChromiumOptions(ArgOptions):
         caps = self._caps
         chrome_options = self.experimental_options.copy()
         chrome_options['extensions'] = self.extensions
+        chrome_options['args'] = self.arguments
         if self.binary_location:
             chrome_options['binary'] = self.binary_location
-        chrome_options['args'] = self.arguments
         if self.debugger_address:
             chrome_options['debuggerAddress'] = self.debugger_address
         caps[self.KEY] = chrome_options
