@@ -18,13 +18,10 @@
 import warnings
 
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
-from seleniumx.webdriver.webkitgtk.service import WebKitGtkDriverService
-from seleniumx.webdriver.webkitgtk.options import WebKitGtkOptions
+from seleniumx.webdriver.webkitgtk.service import WebKitGTKDriverService
 from seleniumx.webdriver.common.options import BaseOptions
 
-# TODO
-# desired_capabilities is required ?
-class WebKitGtkDriver(RemoteWebDriver):
+class WebKitGTKDriver(RemoteWebDriver):
     """ Controls the WebKitGTKDriver and allows you to drive the browser. """
 
     DEFAULT_EXE = "WebKitWebDriver"
@@ -34,7 +31,6 @@ class WebKitGtkDriver(RemoteWebDriver):
         executable_path : str = None,
         port : int = 0,
         options : BaseOptions = None,
-        desired_capabilities = None,
         service_log_path = None,
         keep_alive = False,
         **kwargs
@@ -52,13 +48,9 @@ class WebKitGtkDriver(RemoteWebDriver):
          - service_log_path : Path to write service stdout and stderr output.
          - keep_alive : Whether to configure RemoteConnection to use HTTP keep-alive.
         """
-        desired_capabilities = desired_capabilities or {}
-        if options:
-            desired_capabilities.update(options.to_capabilities())
-
-        self.service = WebKitGtkDriverService(executable_path, port=port, log_path=service_log_path)
-
-        super().__init__(desired_capabilities=desired_capabilities, keep_alive=keep_alive, **kwargs)
+        executable_path = executable_path or WebKitGTKDriver.DEFAULT_EXE
+        self.service = WebKitGTKDriverService(executable_path, port=port, log_path=service_log_path)
+        super().__init__(options=options, keep_alive=keep_alive, **kwargs)
         self._is_remote = False
     
     async def start_service(self):

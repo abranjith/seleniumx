@@ -15,24 +15,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
-try:
-    import http.client as http_client
-except ImportError:
-    import httplib as http_client
+import warnings
 
-from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
-from .service import Service
+from seleniumx.webdriver.wpewebkit.service import WPEWebKitDriverService
+from seleniumx.webdriver.common.options import BaseOptions
 
 
-class WebDriver(RemoteWebDriver):
-    """
-    Controls the WPEWebKitDriver and allows you to drive the browser.
-    """
-
-    def __init__(self, executable_path="WPEWebDriver", port=0, options=None,
-                 desired_capabilities=DesiredCapabilities.WPEWEBKIT,
-                 service_log_path=None):
+class WPEWebKitDriver(RemoteWebDriver):
+    """ Controls the WPEWebKitDriver and allows you to drive the browser. """
+    
+    DEFAULT_EXE = "WPEWebDriver"
+    
+    def __init__(
+        self,
+        executable_path : str= None,
+        port : int = 0,
+        options : BaseOptions = None,
+        service_log_path = None,
+        **kwargs
+    ):
         """
         Creates a new instance of the WPEWebKit driver.
 
@@ -45,28 +47,24 @@ class WebDriver(RemoteWebDriver):
          - desired_capabilities : Dictionary object with desired capabilities
          - service_log_path : Path to write service stdout and stderr output.
         """
-        if options is not None:
-            capabilities = options.to_capabilities()
-            capabilities.update(desired_capabilities)
-            desired_capabilities = capabilities
 
-        self.service = Service(executable_path, port=port, log_path=service_log_path)
-        self.service.start()
-
-        RemoteWebDriver.__init__(
-            self,
-            command_executor=self.service.service_url,
-            desired_capabilities=desired_capabilities)
+        executable_path = executable_path or WPEWebKitDriver.DEFAULT_EXE
+        self.service = WPEWebKitDriverService(executable_path, port=port, log_path=service_log_path)
+        super().__init__(options=options, **kwargs)
         self._is_remote = False
 
-    def quit(self):
-        """
-        Closes the browser and shuts down the WPEWebKitDriver executable
-        that is started when starting the WPEWebKitDriver
+    async def start_service(self):
+        await self.service.start()
+        self.server_url = self.service.service_url
+    
+    async def quit(self):
+        """ Closes the browser and shuts down the WebKitGTKDriver executable
+        that was started when starting the WebKitGTKDriver
         """
         try:
-            RemoteWebDriver.quit(self)
-        except http_client.BadStatusLine:
-            pass
+            await super().quit()
+        except Exception as ex:
+            warnings.warn(f"Something went wrong issuing quit request to server. Details - {str(ex)}")
         finally:
-            self.service.stop()
+            await self.service.stop()
+

@@ -18,7 +18,7 @@
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.common.options import ArgOptions
 
-class WebKitGtkOptions(ArgOptions):
+class WebKitGTKOptions(ArgOptions):
 
     KEY = "webkitgtk:browserOptions"
     LOAD_STRATEGY = ["normal", "eager", "none"] 
@@ -68,10 +68,10 @@ class WebKitGtkOptions(ArgOptions):
 
     @page_load_strategy.setter
     def page_load_strategy(self, strategy):
-        if strategy in WebKitGtkOptions.LOAD_STRATEGY:
+        if strategy in WebKitGTKOptions.LOAD_STRATEGY:
             self.set_capability("pageLoadStrategy", strategy)
         else:
-            raise ValueError(f"Strategy can only be one of the following: {', '.join(WebKitGtkOptions.LOAD_STRATEGY)}")
+            raise ValueError(f"Strategy can only be one of the following: {', '.join(WebKitGTKOptions.LOAD_STRATEGY)}")
 
     def to_capabilities(self):
         """

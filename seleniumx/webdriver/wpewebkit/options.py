@@ -15,30 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from seleniumx.webdriver.common.options import ArgOptions
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 
-
-class Options(object):
-    KEY = 'wpe:browserOptions'
+class WPEWebKitOptions(ArgOptions):
+    
+    KEY = "wpe:browserOptions"
 
     def __init__(self):
-        self._binary_location = ''
-        self._arguments = []
-        self._caps = DesiredCapabilities.WPEWEBKIT.copy()
-
-    @property
-    def capabilities(self):
-        return self._caps
-
-    def set_capability(self, name, value):
-        """Sets a capability."""
-        self._caps[name] = value
+        super().__init__()
+        self._binary_location = ""
+        #override base class defaults
+        self._caps = self.default_capabilities
 
     @property
     def binary_location(self):
-        """
-        Returns the location of the browser binary otherwise an empty string
-        """
+        """ Returns the location of the browser binary otherwise an empty string """
         return self._binary_location
 
     @binary_location.setter
@@ -51,25 +43,6 @@ class Options(object):
         """
         self._binary_location = value
 
-    @property
-    def arguments(self):
-        """
-        Returns a list of arguments needed for the browser
-        """
-        return self._arguments
-
-    def add_argument(self, argument):
-        """
-        Adds an argument to the list
-
-        :Args:
-         - Sets the arguments
-        """
-        if argument:
-            self._arguments.append(argument)
-        else:
-            raise ValueError("argument can not be null")
-
     def to_capabilities(self):
         """
         Creates a capabilities with all the options that have been set and
@@ -79,10 +52,13 @@ class Options(object):
 
         browser_options = {}
         if self.binary_location:
-            browser_options["binary"] = self.binary_location
+            browser_options['binary'] = self.binary_location
         if self.arguments:
-            browser_options["args"] = self.arguments
-
-        caps[Options.KEY] = browser_options
+            browser_options['args'] = self.arguments
+        caps[self.KEY] = browser_options
 
         return caps
+    
+    @property
+    def default_capabilities(self):
+        return DesiredCapabilities.WPEWEBKIT.copy()

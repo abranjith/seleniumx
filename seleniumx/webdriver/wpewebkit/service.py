@@ -15,28 +15,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from seleniumx.webdriver.common import service
+from seleniumx.webdriver.common.service import Service
 
+class WPEWebKitDriverService(Service):
+    """ Object that manages the starting and stopping of the WPEWebKitDriver """
 
-class Service(service.Service):
-    """
-    Object that manages the starting and stopping of the WPEWebKitDriver
-    """
-
-    def __init__(self, executable_path, port=0, log_path=None):
-        """
-        Creates a new instance of the Service
+    def __init__(
+        self,
+        executable_path : str,
+        port : int = 0,
+        log_path : str = None):
+        """ Creates a new instance of the Service
 
         :Args:
          - executable_path : Path to the WPEWebKitDriver
          - port : Port the service is running on
          - log_path : Path for the WPEWebKitDriver service to log to
         """
-        log_file = open(log_path, "wb") if log_path is not None and log_path != "" else None
-        service.Service.__init__(self, executable_path, port, log_file)
+        log_file = open(log_path, "wb") if log_path else None
+        super().__init__(executable_path, port, log_file)
 
     def command_line_args(self):
-        return ["-p", "%d" % self.port]
-
-    def send_remote_shutdown_command(self):
-        pass
+        return ["-p", f"{self.port}"]

@@ -28,10 +28,10 @@ from .edge.options import EdgeOptions as EdgeOptions # noqa
 from .opera.webdriver import OperaDriver as Opera  # noqa
 from .safari.webdriver import SafariDriver as Safari  # noqa
 from .android.webdriver import SelendroidDriver as Android  # noqa
-from .webkitgtk.webdriver import WebDriver as WebKitGTK # noqa
-from .webkitgtk.options import Options as WebKitGTKOptions # noqa
-from .wpewebkit.webdriver import WebDriver as WPEWebKit # noqa
-from .wpewebkit.options import Options as WPEWebKitOptions # noqa
+from .webkitgtk.webdriver import WebKitGTKDriver as WebKitGTK # noqa
+from .webkitgtk.options import WebKitGTKOptions # noqa
+from .wpewebkit.webdriver import WPEWebKitDriver as WPEWebKit # noqa
+from .wpewebkit.options import WPEWebKitOptions # noqa
 from .remote.webdriver import RemoteWebDriver as Remote  # noqa
 from .common.desired_capabilities import DesiredCapabilities  # noqa
 from .common.action_chains import ActionChains  # noqa

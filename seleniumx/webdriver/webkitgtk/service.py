@@ -17,7 +17,7 @@
 
 from seleniumx.webdriver.common.service import Service
 
-class WebKitGtkDriverService(Service):
+class WebKitGTKDriverService(Service):
     """ Object that manages the starting and stopping of the WebKitGTKDriver """
 
     def __init__(
@@ -34,7 +34,7 @@ class WebKitGtkDriverService(Service):
          - log_path : Path for the WebKitGTKDriver service to log to
         """
         log_file = open(log_path, "wb") if log_path else None
-        super().__init__(self, executable_path, port, log_file)
+        super().__init__(executable_path, port, log_file)
 
     def command_line_args(self):
         return ["-p", f"{self.port}"]

@@ -62,10 +62,9 @@ class ArgOptions(BaseOptions):
         :Args:
          - Sets the arguments
         """
-        if argument:
-            self._arguments.append(argument)
-        else:
-            raise ValueError("argument can not be null")
+        if not argument:
+            raise ValueError("argument is a required parameter")
+        self._arguments.append(argument)
 
     def to_capabilities(self):
         return self._caps
