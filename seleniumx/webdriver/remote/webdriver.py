@@ -28,7 +28,8 @@ from async_property import async_property
 from seleniumx.common.exceptions import (InvalidArgumentException,
                                         WebDriverException,
                                         NoSuchCookieException,
-                                        UnknownMethodException)
+                                        UnknownMethodException,
+                                        NoSuchElementException)
 from seleniumx.webdriver.common.by import By
 from seleniumx.webdriver.common.timeouts import Timeouts
 from seleniumx.webdriver.common.enums import Command
@@ -747,20 +748,30 @@ class RemoteWebDriver(_BaseDriver):
         response = await self.execute(Command.SET_TIMEOUTS, timeouts._to_json())
         return response['value']
 
-    async def find_element(self, by=By.ID, value=None):
+    async def find_element(self, by=By.ID_OR_NAME, value=None):
         """ Find an element given a By strategy and locator. Default By is By.ID
-
+        #NOTE - 
         :Usage:
             ::
                 element = driver.find_element(By.ID, 'foo')
 
         :rtype: WebElement
         """
-        by, value = By.get_w3caware_by_value(by, value, self._w3c)
-        response = await self.execute(Command.FIND_ELEMENT, {'using': by, 'value': value})
-        return response.get('value')
+        last_ex = None
+        extra_args = []
+        failed_attempt_msg = "find_element with locator {} = {} failed"
+        for by, value in By.get_w3caware_by_value(by, value, self._w3c):
+            try:
+                response = await self.execute(Command.FIND_ELEMENT, {'using': by, 'value': value})
+                return response.get('value')
+            except NoSuchElementException as ex:
+                last_ex = ex
+                extra_args.append(failed_attempt_msg.format(by, value))
+        if last_ex is not None:
+            last_ex.args = tuple(extra_args) + last_ex.args
+            raise last_ex
 
-    async def find_elements(self, by=By.ID, value=None):
+    async def find_elements(self, by=By.ID_OR_NAME, value=None):
         """ Find elements given a By strategy and locator. Default By is By.ID
 
         :Usage:
@@ -776,11 +787,17 @@ class RemoteWebDriver(_BaseDriver):
             find_element_js = f"return ({raw_function}).apply(null, arguments);"
             return await self.execute_script(find_element_js, by.to_dict())
 
-        by, value = By.get_w3caware_by_value(by, value, self._w3c)
-
+        for by, value in By.get_w3caware_by_value(by, value, self._w3c):
+            try:
+                response = await self.execute(Command.FIND_ELEMENTS, {'using': by, 'value': value})
+                response_value = response.get('value', [])
+                if response_value:
+                    return response_value
+            except NoSuchElementException:
+                #ignore exception and continue with next attempt
+                pass
         # Return empty list if driver returns no value
-        response = await self.execute(Command.FIND_ELEMENTS, {'using': by, 'value': value})
-        return response.get('value', [])
+        return []
     
     async def get_screenshot_as_file(self, filename):
         """ Saves a screenshot of the current window to a PNG image file. Returns

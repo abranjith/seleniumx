@@ -26,9 +26,19 @@ class By(object):
     TAG_NAME = "tag name"
     CLASS_NAME = "class name"
     CSS_SELECTOR = "css selector"
+    #special ones - these cannot be passed to remote server as is
+    ID_OR_NAME = [ID, NAME]
 
     @staticmethod
     def get_w3caware_by_value(by, value, w3c_flag):
+        #supports multiple By for the same value
+        if not (isinstance(by, (list, tuple))):
+            by = [by]
+        for _by in by:
+            yield By._get_w3caware_by_value(by, value, w3c_flag)
+    
+    @staticmethod
+    def _get_w3caware_by_value(by, value, w3c_flag):
         if not w3c_flag:
             return (by, value)
         if by == By.ID:

@@ -27,7 +27,7 @@ from io import BytesIO as IOStream
 import aiofiles
 from async_property import async_property
 
-from seleniumx.common.exceptions import WebDriverException
+from seleniumx.common.exceptions import WebDriverException, NoSuchElementException
 from seleniumx.webdriver.common.by import By
 from seleniumx.webdriver.common.utils import keys_to_typing
 from seleniumx.webdriver.common.enums import Command
@@ -334,7 +334,7 @@ class WebElement(object):
             del png_file
         return True
     
-    async def find_element(self, by=By.ID, value=None):
+    async def find_element(self, by=By.ID_OR_NAME, value=None):
         """
         Find an element given a By strategy and locator. Prefer the find_element_by_* methods when
         possible.
@@ -346,12 +346,22 @@ class WebElement(object):
 
         :rtype: WebElement
         """
-        by, value = By.get_w3caware_by_value(by, value, self._w3c)
-        response = await self._execute(Command.FIND_CHILD_ELEMENT,
+        last_ex = None
+        extra_args = []
+        failed_attempt_msg = "find_element with locator {} = {} failed"
+        for by, value in By.get_w3caware_by_value(by, value, self._w3c):
+            try:
+                response = await self._execute(Command.FIND_CHILD_ELEMENT,
                              {'using': by, 'value': value})
-        return response['value']
+                return response.get('value')
+            except NoSuchElementException as ex:
+                last_ex = ex
+                extra_args.append(failed_attempt_msg.format(by, value))
+        if last_ex is not None:
+            last_ex.args = tuple(extra_args) + last_ex.args
+            raise last_ex
 
-    async def find_elements(self, by=By.ID, value=None):
+    async def find_elements(self, by=By.ID_OR_NAME, value=None):
         """
         Find elements given a By strategy and locator. Prefer the find_elements_by_* methods when
         possible.
@@ -363,10 +373,18 @@ class WebElement(object):
 
         :rtype: list of WebElement
         """
-        by, value = By.get_w3caware_by_value(by, value, self._w3c)
-        response = await  self._execute(Command.FIND_CHILD_ELEMENTS,
+        for by, value in By.get_w3caware_by_value(by, value, self._w3c):
+            try:
+                response = await  self._execute(Command.FIND_CHILD_ELEMENTS,
                              {'using': by, 'value': value})
-        return response['value']
+                response_value = response.get('value', [])
+                if response_value:
+                    return response_value
+            except NoSuchElementException:
+                #ignore exception and continue with next attempt
+                pass
+        # Return empty list if driver returns no value
+        return []
     
     async def _execute(
         self,
