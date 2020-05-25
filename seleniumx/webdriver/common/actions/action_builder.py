@@ -15,15 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from collections import defaultdict
-
-from seleniumx.webdriver.remote.command import CommandInfo
-from seleniumx.webdriver.common.actions.interaction import InteractionType
-from seleniumx.webdriver.common.actions.key_actions import KeyActions
-from seleniumx.webdriver.common.actions.key_input import KeyInput
-from seleniumx.webdriver.common.actions.pointer_actions import PointerActions
-from seleniumx.webdriver.common.actions.pointer_input import PointerInput
 from seleniumx.webdriver.common.enums import Command
+from seleniumx.webdriver.common.actions.interaction import InteractionType
+from seleniumx.webdriver.common.actions.input_device import KeyInput, PointerInput
 
 class ActionBuilder(object):
     
@@ -38,8 +32,6 @@ class ActionBuilder(object):
         if keyboard is None:
             keyboard = KeyInput(InteractionType.KEY)
         self._devices = [mouse, keyboard]
-        self._key_action = KeyActions(keyboard)
-        self._pointer_action = PointerActions(mouse)
         self._driver = driver
     
     @property
@@ -56,11 +48,15 @@ class ActionBuilder(object):
 
     @property
     def key_action(self):
-        return self._key_action
+        key_inputs = self.key_inputs
+        if key_inputs:
+            return key_inputs[0]
 
     @property
     def pointer_action(self):
-        return self._pointer_action
+        pointer_inputs = self.pointer_inputs
+        if pointer_inputs:
+            return pointer_inputs[0]
     
     def get_device_with_name(self, name):
         if not (self._devices and name):

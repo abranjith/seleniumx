@@ -2,7 +2,6 @@ import asyncio
 import httpx
 from seleniumx.webdriver.common.enums import HttpMethod
 
-#TODO - these singleton instances might not  work in all cases. Might need a design where instance is spinned up based on input args
 class _BaseClient(object):
     # NOTE - soft_limit is for max keep alives and hard_limit for connection pool max number limit
     KEEPALIVE_POOL_LIMIT = httpx.PoolLimits(soft_limit=10, hard_limit=10)
@@ -90,7 +89,7 @@ class HttpClient(_BaseClient):
     
     #closes underlying connection pool
     async def close(self):
-        if self._client and hasattr(self._client, "aclose"):
+        if self._client:
             await self._client.aclose()
             self._client = None
     

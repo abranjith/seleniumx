@@ -68,8 +68,7 @@ class ActionChains(object):
         self._driver = driver
         self._w3c = self._driver.w3c
         self._actions = []
-        if self._w3c:
-            self._w3c_actions = ActionBuilder(driver)
+        self._w3c_actions = ActionBuilder(driver)
 
     async def perform(self):
         """ Performs all stored actions. """

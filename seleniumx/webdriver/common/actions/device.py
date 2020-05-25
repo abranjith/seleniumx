@@ -46,7 +46,7 @@ class InputDevice(Device):
         return self._actions
     
     async def iter_actions(self):
-        #sends actions in groups of that dont have pre-actions
+        #sends actions in groups of that dont have pre-actions. If there are pre_actions, those will be executed before yeilding next set of actions
         ready_actions = []
         for action in self._actions:
             if not action.has_pre_actions:
@@ -82,21 +82,22 @@ class OutputDevice(Device):
 
 class Action(object):
     """ This class represents a particular action such as key down, move pointer etc. Unfortunately these operations are not
-    atomic and this is an attempt to solve some of that.
+    atomic and this is an attempt to solve for that.
     For eg - before moving to an element (action), get its co-ordinates from browser (pre-action) and use the return value as params
-    to the action. So, there could be one or more such pre-actions that need to occur 
+    to the action. So, there could be one or more such pre-actions that need to occur
     This class also solves for more complex cases such as chaining of multiple pre-actions. With that, user can specify all the
     pre-actions (sync or async) that needs to happen in order where return value from previous action can be passed over to next and so on.
     Since python provides many ways of specifying arguments for a function, it is difficult to cater for all those cases. This class only
     solves for cases where return values from previous call matches next call (position wise). User needs to keep this in mind before desiging the
     functions. Any specific pre-action can be thought of as pre-action(args + previous_return_args). And results from final pre-action can be passed
     over to the action_fn
-    WARNING - user is responsible for overall orchestration (that is perform pre actions before invoking final action  object). 
-              If not results will not be accurate.
+    NOTE - 1) user is responsible for overall orchestration (that is perform pre actions before invoking final action object). 
+              If not results will not be predictable.
+           2) It's always a good practice to have args and return values of the user functions as a tuple
     """
         
-    PreAction = namedtuple("PreAction", ["task", "args", "pass_from_previous_call"])
-    ActionFn = PreAction
+    PreActionFn = namedtuple("PreActionFn", ["task", "args", "pass_from_previous_call"])
+    ActionFn = PreActionFn
     
     def __init__(self, action=None):
         self._pre_actions = []
@@ -117,7 +118,7 @@ class Action(object):
         return self._action
     
     def add_pre_action(self, pre_action, args=None, pass_from_previous_call=True):
-        pre_action = Action.PreAction(task=pre_action, args=args, pass_from_previous_call=pass_from_previous_call)
+        pre_action = Action.PreActionFn(task=pre_action, args=args, pass_from_previous_call=pass_from_previous_call)
         self._pre_actions.append(pre_action)
     
     def add_action_fn(self, action_fn, args=None, pass_from_previous_call=True):
