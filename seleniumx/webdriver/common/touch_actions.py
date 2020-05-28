@@ -15,16 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import warnings
+
 from seleniumx.webdriver.common.enums import Command
-from seleniumx.webdriver.remote.command import CommandInfo
 
 class TouchActions(object):
-    """
-    Generate touch actions. Works like ActionChains; actions are stored in the
+    """ Generate touch actions. Works like ActionChains; actions are stored in the
     TouchActions object and are fired with perform().
     """
 
-    def __init__(self, driver):
+    def __init__(
+        self,
+        driver
+    ):
         """
         Creates a new TouchActions object.
 
@@ -35,22 +38,23 @@ class TouchActions(object):
         self._driver = driver
         self._actions = []
 
-    def perform(self):
-        """
-        Performs all stored actions.
-        """
+    async def perform(self):
+        """ Performs all stored actions. """
+        if not self._actions:
+            warnings.warn(f"There are no actions found to perform")
         for action in self._actions:
-            action()
+            await action()
+    
+    def reset_actions(self):
+        """ Clears actions that are already stored locally and on the remote end """
+        self._actions = []
 
     def tap(self, on_element):
-        """
-        Taps on a given element.
-
+        """ Taps on a given element.
         :Args:
          - on_element: The element to tap.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.SINGLE_TAP, {'element': on_element.id}))
+        self._add_command(Command.SINGLE_TAP, {'element': on_element.id})
         return self
 
     def double_tap(self, on_element):
@@ -60,8 +64,7 @@ class TouchActions(object):
         :Args:
          - on_element: The element to tap.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.DOUBLE_TAP, {'element': on_element.id}))
+        self._add_command(Command.DOUBLE_TAP, {'element': on_element.id})
         return self
 
     def tap_and_hold(self, xcoord, ycoord):
@@ -72,10 +75,7 @@ class TouchActions(object):
          - xcoord: X Coordinate to touch down.
          - ycoord: Y Coordinate to touch down.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.TOUCH_DOWN, {
-                'x': int(xcoord),
-                'y': int(ycoord)}))
+        self._add_command(Command.TOUCH_DOWN, {'x': int(xcoord), 'y': int(ycoord)})
         return self
 
     def move(self, xcoord, ycoord):
@@ -86,10 +86,7 @@ class TouchActions(object):
          - xcoord: X Coordinate to move.
          - ycoord: Y Coordinate to move.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.TOUCH_MOVE, {
-                'x': int(xcoord),
-                'y': int(ycoord)}))
+        self._add_command(Command.TOUCH_MOVE, {'x': int(xcoord), 'y': int(ycoord)})
         return self
 
     def release(self, xcoord, ycoord):
@@ -100,10 +97,7 @@ class TouchActions(object):
          - xcoord: X Coordinate to release.
          - ycoord: Y Coordinate to release.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.TOUCH_UP, {
-                'x': int(xcoord),
-                'y': int(ycoord)}))
+        self._add_command(Command.TOUCH_UP, {'x': int(xcoord), 'y': int(ycoord)})
         return self
 
     def scroll(self, xoffset, yoffset):
@@ -114,10 +108,7 @@ class TouchActions(object):
          - xoffset: X offset to scroll to.
          - yoffset: Y offset to scroll to.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.TOUCH_SCROLL, {
-                'xoffset': int(xoffset),
-                'yoffset': int(yoffset)}))
+        self._add_command(Command.TOUCH_SCROLL, {'xoffset': int(xoffset), 'yoffset': int(yoffset)})
         return self
 
     def scroll_from_element(self, on_element, xoffset, yoffset):
@@ -129,11 +120,10 @@ class TouchActions(object):
          - xoffset: X offset to scroll to.
          - yoffset: Y offset to scroll to.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.TOUCH_SCROLL, {
+        self._add_command(Command.TOUCH_SCROLL, {
                 'element': on_element.id,
                 'xoffset': int(xoffset),
-                'yoffset': int(yoffset)}))
+                'yoffset': int(yoffset)})
         return self
 
     def long_press(self, on_element):
@@ -143,8 +133,7 @@ class TouchActions(object):
         :Args:
          - on_element: The element to long press.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.LONG_PRESS, {'element': on_element.id}))
+        self._add_command(Command.LONG_PRESS, {'element': on_element.id})
         return self
 
     def flick(self, xspeed, yspeed):
@@ -155,10 +144,7 @@ class TouchActions(object):
          - xspeed: The X speed in pixels per second.
          - yspeed: The Y speed in pixels per second.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.FLICK, {
-                'xspeed': int(xspeed),
-                'yspeed': int(yspeed)}))
+        self._add_command(Command.FLICK, {'xspeed': int(xspeed), 'yspeed': int(yspeed)})
         return self
 
     def flick_element(self, on_element, xoffset, yoffset, speed):
@@ -172,17 +158,29 @@ class TouchActions(object):
          - yoffset: Y offset to flick to.
          - speed: Pixels per second to flick.
         """
-        self._actions.append(lambda: self._driver.execute(
-            Command.FLICK, {
+        self._add_command(Command.FLICK, {
                 'element': on_element.id,
                 'xoffset': int(xoffset),
                 'yoffset': int(yoffset),
-                'speed': int(speed)}))
+                'speed': int(speed)})
+        return self
+    
+    def _add_command(
+        self,
+        command,
+        params
+    ):
+        self._actions.append(self._driver.execute(command, params))
+
+    # Context manager so ActionChains can be used in a 'with .. as' statements.
+    async def __aenter__(self):
         return self
 
-    # Context manager so TouchActions can be used in a 'with .. as' statements.
+    async def __aexit__(self, *excinfo):
+        yield
+    
     def __enter__(self):
-        return self  # Return created instance of self.
+        return self
 
-    def __exit__(self, _type, _value, _traceback):
-        pass  # Do nothing, does not require additional cleanup.
+    def __exit__(self, *excinfo):
+        pass

@@ -745,7 +745,7 @@ class RemoteWebDriver(_BaseDriver):
                 my_timeouts.implicit_wait = 10
                 driver.timeouts = my_timeouts
         """
-        response = await self.execute(Command.SET_TIMEOUTS, timeouts._to_json())
+        response = await self.execute(Command.SET_TIMEOUTS, timeouts.to_json())
         return response['value']
 
     async def find_element(self, by=By.ID_OR_NAME, value=None):

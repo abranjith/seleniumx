@@ -393,3 +393,8 @@ class ActionChains(object):
     async def __aexit__(self, *excinfo):
         yield
     
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *excinfo):
+        pass
