@@ -28,7 +28,7 @@ class HttpExecutor(object):
         self._timeout = timeout
         self._ca_certs = ca_certs
         self._command_codec = command_codec
-        self._headers = self._get_default_headers(headers)
+        self._headers = self.get_default_headers(headers)
         self._w3c = False
         self._request_wrapper = WebDriverRequestWrapper()
         self._response_wrapper = WebDriverResponseWrapper()
@@ -53,7 +53,7 @@ class HttpExecutor(object):
             self._base_url = url
             self._http_client.base_url = url
 
-    def _get_default_headers(self, additional_headers=None):
+    def get_default_headers(self, additional_headers=None):
         system = platform.system().lower()
         system = "mac" if system == "darwin" else system
 
