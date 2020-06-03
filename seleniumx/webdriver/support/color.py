@@ -15,19 +15,56 @@
 # specific language governing permissions and limitations
 # under the License.
 
-RGB_PATTERN = r"^\s*rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)\s*$"
-RGB_PCT_PATTERN = r"^\s*rgb\(\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*\)\s*$"
-RGBA_PATTERN = r"^\s*rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(0|1|0\.\d+)\s*\)\s*$"
-RGBA_PCT_PATTERN = r"^\s*rgba\(\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(0|1|0\.\d+)\s*\)\s*$"
-HEX_PATTERN = r"#([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})"
-HEX3_PATTERN = r"#([A-Fa-f0-9])([A-Fa-f0-9])([A-Fa-f0-9])"
-HSL_PATTERN = r"^\s*hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)\s*$"
-HSLA_PATTERN = r"^\s*hsla\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*,\s*(0|1|0\.\d+)\s*\)\s*$"
+import re
 
+class ColorParser(object):
+
+    RGB_PATTERN = r"(?P<RGB>^\s*rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)\s*$)"
+    RGB_PCT_PATTERN = r"(?P<RGBPCT>^\s*rgb\(\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*\)\s*$)"
+    RGBA_PATTERN = r"(?P<RGBA>^\s*rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(0|1|0\.\d+)\s*\)\s*$)"
+    RGBA_PCT_PATTERN = r"(?P<RGBAPCT>^\s*rgba\(\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(\d{1,3}|\d{1,2}\.\d+)%\s*,\s*(0|1|0\.\d+)\s*\)\s*$)"
+    HEX_PATTERN = r"(?P<HEX>#([A-Fa-f0-9]{2})([A-Fa-f0-9]{2})([A-Fa-f0-9]{2}))"
+    HEX3_PATTERN = r"(?P<HEX3>#([A-Fa-f0-9])([A-Fa-f0-9])([A-Fa-f0-9]))"
+    HSL_PATTERN = r"(?P<HSL>^\s*hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)\s*$)"
+    HSLA_PATTERN = r"(?P<HSLA>^\s*hsla\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*,\s*(0|1|0\.\d+)\s*\)\s*$)"
+
+    @staticmethod
+    def get_color_for_text(text):
+        name, groups = ColorParser.get_matching_groups(text)
+        if name and groups:
+            #special handling
+            if name in ["HSL", "HSLA"]:
+                return Color._from_hsl(*groups)
+            elif name == "RGBPCT":
+                groups = tuple([float(g) / 100 * 255 for g in groups])
+            elif name == "RGBAPCT":
+                groups = tuple([float(g) / 100 * 255 for g in groups[:3]] + [groups[3]])
+            elif name == "HEX":
+                groups = tuple([int(g, 16) for g in groups])
+            elif name == "HEX3":
+                groups = tuple([int(g * 2, 16) for g in groups])
+            return Color(*groups)
+        elif text.upper() in Colors.keys():
+            return Colors[text.upper()]
+        else:
+            raise ValueError(f"Could not convert {text} into color")
+
+    @staticmethod
+    def get_matching_groups(text):
+        CP = ColorParser
+        master = re.compile("|".join([CP.RGB_PATTERN, CP.RGB_PCT_PATTERN, CP.RGBA_PATTERN, CP.RGBA_PCT_PATTERN, CP.HEX_PATTERN, CP.HEX3_PATTERN, CP.HSL_PATTERN, CP.HSLA_PATTERN]))
+        scanner = master.scanner(text)
+        for token in iter(scanner.search, None):
+            name = token.lastgroup
+            all_groups = token.groups()
+            required_groups = [g for g in all_groups if g is not None]
+            if len(required_groups) > 0:
+                groups = tuple(required_groups[1:])
+                return (name, groups)
+        return (None, None)
 
 class Color(object):
-    """
-    Color conversion support class
+    """ Color conversion support class
 
     Example:
 
@@ -41,80 +78,42 @@ class Color(object):
     """
 
     @staticmethod
-    def from_string(str_):
-        import re
-
-        class Matcher(object):
-            def __init__(self):
-                self.match_obj = None
-
-            def match(self, pattern, str_):
-                self.match_obj = re.match(pattern, str_)
-                return self.match_obj
-
-            @property
-            def groups(self):
-                return () if self.match_obj is None else self.match_obj.groups()
-
-        m = Matcher()
-
-        if m.match(RGB_PATTERN, str_):
-            return Color(*m.groups)
-        elif m.match(RGB_PCT_PATTERN, str_):
-            rgb = tuple([float(each) / 100 * 255 for each in m.groups])
-            return Color(*rgb)
-        elif m.match(RGBA_PATTERN, str_):
-            return Color(*m.groups)
-        elif m.match(RGBA_PCT_PATTERN, str_):
-            rgba = tuple([float(each) / 100 * 255 for each in m.groups[:3]] + [m.groups[3]])
-            return Color(*rgba)
-        elif m.match(HEX_PATTERN, str_):
-            rgb = tuple([int(each, 16) for each in m.groups])
-            return Color(*rgb)
-        elif m.match(HEX3_PATTERN, str_):
-            rgb = tuple([int(each * 2, 16) for each in m.groups])
-            return Color(*rgb)
-        elif m.match(HSL_PATTERN, str_) or m.match(HSLA_PATTERN, str_):
-            return Color._from_hsl(*m.groups)
-        elif str_.upper() in Colors.keys():
-            return Colors[str_.upper()]
-        else:
-            raise ValueError("Could not convert %s into color" % str_)
+    def from_string(text):
+        return ColorParser.get_color_for_text(text)
 
     @staticmethod
     def _from_hsl(h, s, l, a=1):
-        h = float(h) / 360
-        s = float(s) / 100
-        _l = float(l) / 100
+        hue = float(h) / 360
+        saturation = float(s) / 100
+        luminocity = float(l) / 100
 
-        if s == 0:
-            r = _l
-            g = r
-            b = r
+        if saturation == 0:
+            r = luminocity
+            g, b = r, r
         else:
-            luminocity2 = _l * (1 + s) if _l < 0.5 else _l + s - _l * s
-            luminocity1 = 2 * _l - luminocity2
+            luminocity2 = luminocity * (1 + saturation) if luminocity < 0.5 else luminocity + saturation - luminocity * saturation
+            luminocity1 = 2 * luminocity - luminocity2
+            r = Color._hue_to_rgb(luminocity1, luminocity2, hue + 1.0 / 3.0)
+            g = Color._hue_to_rgb(luminocity1, luminocity2, hue)
+            b = Color._hue_to_rgb(luminocity1, luminocity2, hue - 1.0 / 3.0)
 
-            def hue_to_rgb(lum1, lum2, hue):
-                if hue < 0.0:
-                    hue += 1
-                if hue > 1.0:
-                    hue -= 1
+        return Color(round(r * 255), round(g * 255), round(b * 255), alpha=a)
+    
+    @staticmethod
+    def _hue_to_rgb(lum1, lum2, hue):
+        if hue < 0.0:
+            hue += 1
+        if hue > 1.0:
+            hue -= 1
 
-                if hue < 1.0 / 6.0:
-                    return (lum1 + (lum2 - lum1) * 6.0 * hue)
-                elif hue < 1.0 / 2.0:
-                    return lum2
-                elif hue < 2.0 / 3.0:
-                    return lum1 + (lum2 - lum1) * ((2.0 / 3.0) - hue) * 6.0
-                else:
-                    return lum1
-
-            r = hue_to_rgb(luminocity1, luminocity2, h + 1.0 / 3.0)
-            g = hue_to_rgb(luminocity1, luminocity2, h)
-            b = hue_to_rgb(luminocity1, luminocity2, h - 1.0 / 3.0)
-
-        return Color(round(r * 255), round(g * 255), round(b * 255), a)
+        if hue < 1.0 / 6.0:
+            return (lum1 + (lum2 - lum1) * 6.0 * hue)
+        elif hue < 1.0 / 2.0:
+            return lum2
+        elif hue < 2.0 / 3.0:
+            return lum1 + (lum2 - lum1) * ((2.0 / 3.0) - hue) * 6.0
+        else:
+            return lum1
 
     def __init__(self, red, green, blue, alpha=1):
         self.red = int(red)
@@ -124,35 +123,32 @@ class Color(object):
 
     @property
     def rgb(self):
-        return "rgb(%d, %d, %d)" % (self.red, self.green, self.blue)
+        return f"rgb({self.red}, {self.green}, {self.blue})"
 
     @property
     def rgba(self):
-        return "rgba(%d, %d, %d, %s)" % (self.red, self.green, self.blue, self.alpha)
+        return f"rgba({self.red}, {self.green}, {self.blue}, {self.alpha})"
 
     @property
     def hex(self):
-        return "#%02x%02x%02x" % (self.red, self.green, self.blue)
+        return f"#{self.red:02x}{self.green:02x}{self.blue:02x}"
 
     def __eq__(self, other):
         if isinstance(other, Color):
             return self.rgba == other.rgba
-        return NotImplemented
+        return False
 
     def __ne__(self, other):
-        result = self.__eq__(other)
-        if result is NotImplemented:
-            return result
-        return not result
+        return not self.__eq__(other)
 
     def __hash__(self):
         return hash((self.red, self.green, self.blue, self.alpha))
 
     def __repr__(self):
-        return "Color(red=%d, green=%d, blue=%d, alpha=%s)" % (self.red, self.green, self.blue, self.alpha)
+        return f"Color(red={self.red}, green={self.green}, blue={self.blue}, alpha={self.alpha})"
 
     def __str__(self):
-        return "Color: %s" % self.rgba
+        return f"Color: {self.rgba}"
 
 
 # Basic, extended and transparent colour keywords as defined by the W3C HTML4 spec
