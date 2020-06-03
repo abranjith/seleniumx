@@ -111,7 +111,6 @@ class HttpExecutor(object):
                 await remote_response.aclose()
                 remote_response = None
         #in case of error handle accordingly
-        #print(remote_response)
         error_handler = ErrorHandler()
         error_handler.handle(response)
         #wrap the webelements
@@ -125,7 +124,9 @@ class HttpExecutor(object):
 
 class WebDriverWrapper(object):
     from seleniumx.webdriver.remote.webelement import WebElement
+    from seleniumx.webdriver.support.event_firing_webdriver import EventFiringWebElement
     _web_element_cls = WebElement
+    _event_firing_web_element_cls = EventFiringWebElement
     #per webdriver specs remote server recognizes web element by id that's associated with either of below keys
     ELEMENT1 = "ELEMENT"
     ELEMENT2 = "element-6066-11e4-a52e-4f735466cecf"
@@ -153,8 +154,13 @@ class WebDriverRequestWrapper(WebDriverWrapper):
             return converted
         elif isinstance(value, self._web_element_cls):
             return {self.ELEMENT1: value.id, self.ELEMENT2: value.id}
+        elif isinstance(value, self._event_firing_web_element_cls):
+            value = value.wrapped_element
+            return {self.ELEMENT1: value.id, self.ELEMENT2: value.id}
         elif isinstance(value, list):
             return list(self.unwrap_web_element(item) for item in value)
+        elif isinstance(value, tuple):
+            return tuple(self.unwrap_web_element(item) for item in value)
         else:
             return value
 

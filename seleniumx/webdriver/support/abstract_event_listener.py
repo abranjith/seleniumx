@@ -17,9 +17,7 @@
 
 
 class AbstractEventListener(object):
-    """
-    Event listener must subclass and implement this fully or partially
-    """
+    """ Event listener must subclass and implement this fully or partially """
 
     def before_navigate_to(self, url, driver):
         pass

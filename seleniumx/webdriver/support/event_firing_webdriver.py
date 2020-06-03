@@ -16,32 +16,36 @@
 # under the License.
 
 
-import warnings
+import inspect
+from functools import update_wrapper
 
 from seleniumx.common.exceptions import WebDriverException
 from seleniumx.webdriver.common.by import By
-from seleniumx.webdriver.remote.webdriver import WebDriver
+from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from seleniumx.webdriver.remote.webelement import WebElement
-from .abstract_event_listener import AbstractEventListener
+from seleniumx.webdriver.support.abstract_event_listener import AbstractEventListener
 
 
 def _wrap_elements(result, ef_driver):
+    """ Wraps WebElement object as EventFiringWebElement """
     if isinstance(result, WebElement):
         return EventFiringWebElement(result, ef_driver)
     elif isinstance(result, list):
-        return [_wrap_elements(item, ef_driver) for item in result]
+        return list(_wrap_elements(item, ef_driver) for item in result)
+    elif isinstance(result, tuple):
+        return tuple(_wrap_elements(item, ef_driver) for item in result)
     else:
         return result
 
-
 class EventFiringWebDriver(object):
-    """
-    A wrapper around an arbitrary WebDriver instance which supports firing events
-    """
+    """ A wrapper around an arbitrary WebDriver instance which supports firing events """
 
-    def __init__(self, driver, event_listener):
-        """
-        Creates a new instance of the EventFiringWebDriver
+    def __init__(
+        self,
+        driver,
+        event_listener
+    ):
+        """ Creates a new instance of the EventFiringWebDriver
 
         :Args:
          - driver : A WebDriver instance
@@ -64,136 +68,104 @@ class EventFiringWebDriver(object):
             ef_driver = EventFiringWebDriver(driver, MyListener())
             ef_driver.get("http://www.google.co.in/")
         """
-        if not isinstance(driver, WebDriver):
+        if not isinstance(driver, RemoteWebDriver):
             raise WebDriverException("A WebDriver instance must be supplied")
         if not isinstance(event_listener, AbstractEventListener):
             raise WebDriverException("Event listener must be a subclass of AbstractEventListener")
         self._driver = driver
-        self._driver._wrap_value = self._wrap_value
         self._listener = event_listener
+        self._dispatcher = _Dispatcher(event_listener, self)
 
     @property
     def wrapped_driver(self):
-        """Returns the WebDriver instance wrapped by this EventsFiringWebDriver"""
+        """ Returns the WebDriver instance wrapped by this EventsFiringWebDriver """
         return self._driver
 
-    def get(self, url):
-        self._dispatch("navigate_to", (url, self._driver), "get", (url, ))
+    async def get(self, url):
+        await self._dispatcher.dispatch(
+            self._listener.before_navigate_to,
+            self._listener.after_navigate_to,
+            (url, self._driver),
+            self._driver.get,
+            url
+        )
 
-    def back(self):
-        self._dispatch("navigate_back", (self._driver,), "back", ())
+    async def back(self):
+        await self._dispatcher.dispatch(
+            self._listener.before_navigate_back,
+            self._listener.after_navigate_back,
+            self._driver,
+            self._driver.back,
+            None
+        )
 
-    def forward(self):
-        self._dispatch("navigate_forward", (self._driver,), "forward", ())
+    async def forward(self):
+        await self._dispatcher.dispatch(
+            self._listener.before_navigate_forward,
+            self._listener.after_navigate_forward,
+            self._driver,
+            self._driver.forward,
+            None
+        )
 
-    def execute_script(self, script, *args):
-        unwrapped_args = (script,) + self._unwrap_element_args(args)
-        return self._dispatch("execute_script", (script, self._driver), "execute_script", unwrapped_args)
+    async def execute_script(self, script, *args):
+        response = await self._dispatcher.dispatch(
+            self._listener.before_execute_script,
+            self._listener.after_execute_script,
+            (script, self._driver),
+            self._driver.execute_script,
+            (script, *args)
+        )
+        return response
 
-    def execute_async_script(self, script, *args):
-        unwrapped_args = (script,) + self._unwrap_element_args(args)
-        return self._dispatch("execute_script", (script, self._driver), "execute_async_script", unwrapped_args)
+    async def execute_async_script(self, script, *args):
+        response = await self._dispatcher.dispatch(
+            self._listener.before_execute_script,
+            self._listener.after_execute_script,
+            (script, self._driver),
+            self._driver.execute_async_script,
+            (script, *args)
+        )
+        return response
 
-    def close(self):
-        self._dispatch("close", (self._driver,), "close", ())
+    async def close(self):
+        await self._dispatcher.dispatch(
+            self._listener.before_close,
+            self._listener.after_close,
+            self._driver,
+            self._driver.close,
+            None
+        )
 
-    def quit(self):
-        self._dispatch("quit", (self._driver,), "quit", ())
+    async def quit(self):
+        await self._dispatcher.dispatch(
+            self._listener.before_quit,
+            self._listener.after_quit,
+            self._driver,
+            self._driver.quit,
+            None
+        )
 
-    def find_element(self, by=By.ID, value=None):
-        return self._dispatch("find", (by, value, self._driver), "find_element", (by, value))
+    async def find_element(self, by=By.ID_OR_NAME, value=None):
+        response = await self._dispatcher.dispatch(
+            self._listener.before_find,
+            self._listener.after_dind,
+            (by, value, self._driver),
+            self._driver.find_element,
+            (by, value)
+        )
+        return response
 
-    def find_elements(self, by=By.ID, value=None):
-        return self._dispatch("find", (by, value, self._driver), "find_elements", (by, value))
 
-    def find_element_by_id(self, id_):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.ID, value=id_)
-
-    def find_elements_by_id(self, id_):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.ID, value=id_)
-
-    def find_element_by_xpath(self, xpath):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.XPATH, value=xpath)
-
-    def find_elements_by_xpath(self, xpath):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.XPATH, value=xpath)
-
-    def find_element_by_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.LINK_TEXT, value=link_text)
-
-    def find_elements_by_link_text(self, text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.LINK_TEXT, value=text)
-
-    def find_element_by_partial_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.PARTIAL_LINK_TEXT, value=link_text)
-
-    def find_elements_by_partial_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.PARTIAL_LINK_TEXT, value=link_text)
-
-    def find_element_by_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.NAME, value=name)
-
-    def find_elements_by_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.NAME, value=name)
-
-    def find_element_by_tag_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.TAG_NAME, value=name)
-
-    def find_elements_by_tag_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.TAG_NAME, value=name)
-
-    def find_element_by_class_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.CLASS_NAME, value=name)
-
-    def find_elements_by_class_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.CLASS_NAME, value=name)
-
-    def find_element_by_css_selector(self, css_selector):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.CSS_SELECTOR, value=css_selector)
-
-    def find_elements_by_css_selector(self, css_selector):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.CSS_SELECTOR, value=css_selector)
-
-    def _dispatch(self, l_call, l_args, d_call, d_args):
-        getattr(self._listener, "before_%s" % l_call)(*l_args)
-        try:
-            result = getattr(self._driver, d_call)(*d_args)
-        except Exception as e:
-            self._listener.on_exception(e, self._driver)
-            raise e
-        getattr(self._listener, "after_%s" % l_call)(*l_args)
-        return _wrap_elements(result, self)
-
-    def _unwrap_element_args(self, args):
-        if isinstance(args, EventFiringWebElement):
-            return args.wrapped_element
-        elif isinstance(args, tuple):
-            return tuple([self._unwrap_element_args(item) for item in args])
-        elif isinstance(args, list):
-            return [self._unwrap_element_args(item) for item in args]
-        else:
-            return args
-
-    def _wrap_value(self, value):
-        if isinstance(value, EventFiringWebElement):
-            return WebDriver._wrap_value(self._driver, value.wrapped_element)
-        return WebDriver._wrap_value(self._driver, value)
+    async def find_elements(self, by=By.ID_OR_NAME, value=None):
+        response = await self._dispatcher.dispatch(
+            self._listener.before_find,
+            self._listener.after_dind,
+            (by, value, self._driver),
+            self._driver.find_elements,
+            (by, value)
+        )
+        return response
 
     def __setattr__(self, item, value):
         if item.startswith("_") or not hasattr(self._driver, item):
@@ -201,132 +173,103 @@ class EventFiringWebDriver(object):
         else:
             try:
                 object.__setattr__(self._driver, item, value)
-            except Exception as e:
-                self._listener.on_exception(e, self._driver)
-                raise e
+            except Exception as ex:
+                self._listener.on_exception(ex, self._driver)
+                raise ex
 
     def __getattr__(self, name):
         def _wrap(*args, **kwargs):
             try:
                 result = attrib(*args, **kwargs)
                 return _wrap_elements(result, self)
-            except Exception as e:
-                self._listener.on_exception(e, self._driver)
-                raise
-
+            except Exception as ex:
+                self._listener.on_exception(ex, self._driver)
+                raise ex
+        async def _wrap_async(*args, **kwargs):
+            try:
+                result = await attrib(*args, **kwargs)
+                return _wrap_elements(result, self)
+            except Exception as ex:
+                self._listener.on_exception(ex, self._driver)
+                raise ex
         try:
             attrib = getattr(self._driver, name)
-            return _wrap if callable(attrib) else attrib
-        except Exception as e:
-            self._listener.on_exception(e, self._driver)
-            raise
+            if inspect.iscoroutinefunction(attrib):
+                return update_wrapper(_wrap_async, attrib)
+            elif callable(attrib):
+                return update_wrapper(_wrap, attrib)
+            return attrib
+        except Exception as ex:
+            self._listener.on_exception(ex, self._driver)
+            raise ex
 
 
 class EventFiringWebElement(object):
-    """"
-    A wrapper around WebElement instance which supports firing events
-    """
+    """" A wrapper around WebElement instance which supports firing events """
 
-    def __init__(self, webelement, ef_driver):
-        """
-        Creates a new instance of the EventFiringWebElement
-        """
+    def __init__(
+        self,
+        webelement,
+        ef_driver
+    ):
+        """ Creates a new instance of the EventFiringWebElement """
         self._webelement = webelement
         self._ef_driver = ef_driver
         self._driver = ef_driver.wrapped_driver
         self._listener = ef_driver._listener
+        self._dispatcher = _Dispatcher(self._listener, ef_driver)
 
     @property
     def wrapped_element(self):
-        """Returns the WebElement wrapped by this EventFiringWebElement instance"""
+        """ Returns the WebElement wrapped by this EventFiringWebElement instance """
         return self._webelement
 
-    def click(self):
-        self._dispatch("click", (self._webelement, self._driver), "click", ())
+    async def click(self):
+        await self._dispatcher.dispatch(
+            self._listener.before_click,
+            self._listener.after_click,
+            (self._webelement, self._driver),
+            self._webelement.click,
+            None
+        )
 
-    def clear(self):
-        self._dispatch("change_value_of", (self._webelement, self._driver), "clear", ())
+    async def clear(self):
+        await self._dispatcher.dispatch(
+            self._listener.before_change_value_of,
+            self._listener.after_change_value_of,
+            (self._webelement, self._driver),
+            self._webelement.clear,
+            None
+        )
 
-    def send_keys(self, *value):
-        self._dispatch("change_value_of", (self._webelement, self._driver), "send_keys", value)
+    async def send_keys(self, *value):
+        await self._dispatcher.dispatch(
+            self._listener.before_change_value_of,
+            self._listener.after_change_value_of,
+            (self._webelement, self._driver),
+            self._webelement.send_keys,
+            value
+        )
 
-    def find_element(self, by=By.ID, value=None):
-        return self._dispatch("find", (by, value, self._driver), "find_element", (by, value))
+    async def find_element(self, by=By.ID, value=None):
+        response = await self._dispatcher.dispatch(
+            self._listener.before_find,
+            self._listener.after_dind,
+            (by, value, self._driver),
+            self._webelement.find_element,
+            (by, value)
+        )
+        return response
 
-    def find_elements(self, by=By.ID, value=None):
-        return self._dispatch("find", (by, value, self._driver), "find_elements", (by, value))
-
-    def find_element_by_id(self, id_):
-        return self.find_element(by=By.ID, value=id_)
-
-    def find_elements_by_id(self, id_):
-        return self.find_elements(by=By.ID, value=id_)
-
-    def find_element_by_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.NAME, value=name)
-
-    def find_elements_by_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.NAME, value=name)
-
-    def find_element_by_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.LINK_TEXT, value=link_text)
-
-    def find_elements_by_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.LINK_TEXT, value=link_text)
-
-    def find_element_by_partial_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.PARTIAL_LINK_TEXT, value=link_text)
-
-    def find_elements_by_partial_link_text(self, link_text):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.PARTIAL_LINK_TEXT, value=link_text)
-
-    def find_element_by_tag_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.TAG_NAME, value=name)
-
-    def find_elements_by_tag_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.TAG_NAME, value=name)
-
-    def find_element_by_xpath(self, xpath):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.XPATH, value=xpath)
-
-    def find_elements_by_xpath(self, xpath):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.XPATH, value=xpath)
-
-    def find_element_by_class_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.CLASS_NAME, value=name)
-
-    def find_elements_by_class_name(self, name):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.CLASS_NAME, value=name)
-
-    def find_element_by_css_selector(self, css_selector):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_element(by=By.CSS_SELECTOR, value=css_selector)
-
-    def find_elements_by_css_selector(self, css_selector):
-        warnings.warn("find_element_by_* commands are deprecated. Please use find_element() instead")
-        return self.find_elements(by=By.CSS_SELECTOR, value=css_selector)
-
-    def _dispatch(self, l_call, l_args, d_call, d_args):
-        getattr(self._listener, "before_%s" % l_call)(*l_args)
-        try:
-            result = getattr(self._webelement, d_call)(*d_args)
-        except Exception as e:
-            self._listener.on_exception(e, self._driver)
-            raise e
-        getattr(self._listener, "after_%s" % l_call)(*l_args)
-        return _wrap_elements(result, self._ef_driver)
+    async def find_elements(self, by=By.ID, value=None):
+        response = await self._dispatcher.dispatch(
+            self._listener.before_find,
+            self._listener.after_dind,
+            (by, value, self._driver),
+            self._webelement.find_elements,
+            (by, value)
+        )
+        return response
 
     def __setattr__(self, item, value):
         if item.startswith("_") or not hasattr(self._webelement, item):
@@ -334,9 +277,9 @@ class EventFiringWebElement(object):
         else:
             try:
                 object.__setattr__(self._webelement, item, value)
-            except Exception as e:
-                self._listener.on_exception(e, self._driver)
-                raise e
+            except Exception as ex:
+                self._listener.on_exception(ex, self._driver)
+                raise ex
 
     def __getattr__(self, name):
         def _wrap(*args, **kwargs):
@@ -346,10 +289,63 @@ class EventFiringWebElement(object):
             except Exception as e:
                 self._listener.on_exception(e, self._driver)
                 raise
+        
+        async def _wrap_async(*args, **kwargs):
+            try:
+                result = await attrib(*args, **kwargs)
+                return _wrap_elements(result, self)
+            except Exception as ex:
+                self._listener.on_exception(ex, self._driver)
+                raise ex
 
         try:
             attrib = getattr(self._webelement, name)
-            return _wrap if callable(attrib) else attrib
-        except Exception as e:
-            self._listener.on_exception(e, self._driver)
-            raise
+            if inspect.iscoroutinefunction(attrib):
+                return update_wrapper(_wrap_async, attrib)
+            elif callable(attrib):
+                return update_wrapper(_wrap, attrib)
+            return attrib
+        except Exception as ex:
+            self._listener.on_exception(ex, self._driver)
+            raise ex
+
+class _Dispatcher(object):
+
+    def __init__(self, listener, ef_driver):
+        self._listener = listener
+        self._ef_driver = ef_driver
+        self._driver = ef_driver.wrapped_driver
+    
+    async def dispatch(self, before_func, after_func, listener_args, main_func, main_func_args):
+        listener_args = self._ensure_tuple(listener_args)
+        main_func_args = self._ensure_tuple(main_func_args)
+        await self._fn_orchestrator(before_func, *listener_args)
+        try:
+            result = await self._fn_orchestrator(main_func, *main_func_args)
+        except Exception as ex:
+            self._listener.on_exception(ex, self._driver)
+            raise ex
+        await self._fn_orchestrator(after_func, *listener_args)
+        return _wrap_elements(result, self._ef_driver)
+    
+    #TODO - this can be made a util
+    async def _fn_orchestrator(self, fn, *args):
+        return_args = None
+        if inspect.iscoroutinefunction(fn):
+            if args:
+                return_args = await fn(*args)
+            else:
+                return_args = await fn()
+        elif callable(fn):
+            if args:
+                return_args = fn(*args)
+            else:
+                return_args = fn()
+        return return_args
+    
+    def _ensure_tuple(self, args):
+        if not args:
+            return ()
+        if not isinstance(args, tuple):
+            args = (args,)
+        return args
