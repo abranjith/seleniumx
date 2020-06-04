@@ -16,15 +16,22 @@
 # under the License.
 
 import time
-from seleniumx.common.exceptions import NoSuchElementException
-from seleniumx.common.exceptions import TimeoutException
+import inspect
+import asyncio
 
-POLL_FREQUENCY = 0.5  # How long to sleep inbetween calls to the method
-IGNORED_EXCEPTIONS = (NoSuchElementException,)  # exceptions ignored during calls to the method
-
+from seleniumx.common.exceptions import NoSuchElementException, TimeoutException
 
 class WebDriverWait(object):
-    def __init__(self, driver, timeout, poll_frequency=POLL_FREQUENCY, ignored_exceptions=None):
+
+    POLL_FREQUENCY = 0.5        # How long to sleep in between retry calls
+    DEFAULT_IGNORED_EXCEPTIONS = [NoSuchElementException]      # exceptions ignored during calls to the method
+
+    def __init__(
+        self,
+        driver,
+        timeout,
+        poll_frequency = None,
+        ignored_exceptions = None):
         """Constructor, takes a WebDriver instance and timeout in seconds.
 
            :Args:
@@ -44,23 +51,52 @@ class WebDriverWait(object):
         """
         self._driver = driver
         self._timeout = float(timeout)
-        self._poll = poll_frequency
+        self._poll = poll_frequency or WebDriverWait.POLL_FREQUENCY
         # avoid the divide by zero
-        if self._poll == 0:
-            self._poll = POLL_FREQUENCY
-        exceptions = list(IGNORED_EXCEPTIONS)
-        if ignored_exceptions is not None:
-            try:
-                exceptions.extend(iter(ignored_exceptions))
-            except TypeError:  # ignored_exceptions is not iterable
-                exceptions.append(ignored_exceptions)
+        if self._poll <= 0:
+            self._poll = WebDriverWait.POLL_FREQUENCY
+        exceptions = WebDriverWait.DEFAULT_IGNORED_EXCEPTIONS
+        exceptions = self._extend_ignored_exceptions(exceptions, ignored_exceptions)
         self._ignored_exceptions = tuple(exceptions)
 
     def __repr__(self):
-        return '<{0.__module__}.{0.__name__} (session="{1}")>'.format(
-            type(self), self._driver.session_id)
+        return f'<{type(self).__module__}.{type(self).__name__} (session="{self._driver.session_id}")>'
+    
+    def add_ignored_exceptions(self, ignored_exceptions):
+        exceptions = self._extend_ignored_exceptions(list(self._ignored_exceptions), ignored_exceptions)
+        self._ignored_exceptions = tuple(exceptions)
 
-    def until(self, method, message=''):
+    def remove_ignored_exceptions(self, ignored_exceptions):
+        if not ignored_exceptions:
+            return
+        if isinstance(ignored_exceptions, (list, tuple, set)):
+            ignored_exceptions = list(ignored_exceptions)
+        else:
+            ignored_exceptions = [ignored_exceptions]
+        exceptions = list(self._ignored_exceptions)
+        exceptions_copy = exceptions[:]
+        for ex in exceptions:
+            if ex in ignored_exceptions:
+                exceptions_copy.remove(ex)
+        self._ignored_exceptions = tuple(exceptions_copy)
+    
+    def _extend_ignored_exceptions(self, current, ignored_exceptions):
+        if not ignored_exceptions:
+            return current
+        if isinstance(ignored_exceptions, (list, tuple, set)):
+            ignored_exceptions = list(ignored_exceptions)
+        else:
+            ignored_exceptions = [ignored_exceptions]
+        current.extend(ignored_exceptions)
+        #remoe duplicates
+        current = list(set(current))
+        return current
+
+    async def until(
+        self,
+        method,
+        message = ""
+    ):
         """Calls the method provided with the driver as an argument until the \
         return value does not evaluate to ``False``.
 
@@ -75,18 +111,21 @@ class WebDriverWait(object):
         end_time = time.time() + self._timeout
         while True:
             try:
-                value = method(self._driver)
+                value = await self._fn_orchestrator(method, self._driver)
                 if value:
                     return value
-            except self._ignored_exceptions as exc:
-                screen = getattr(exc, 'screen', None)
-                stacktrace = getattr(exc, 'stacktrace', None)
-            time.sleep(self._poll)
+            except self._ignored_exceptions as ex:          # pylint: disable=catching-non-exception
+                screen = getattr(ex, "screen", None)
+                stacktrace = getattr(ex, "stacktrace", None)
+            await asyncio.sleep(self._poll)
             if time.time() > end_time:
                 break
         raise TimeoutException(message, screen, stacktrace)
 
-    def until_not(self, method, message=''):
+    async def until_not(
+        self,
+        method,
+        message = ""):
         """Calls the method provided with the driver as an argument until the \
         return value evaluates to ``False``.
 
@@ -96,15 +135,33 @@ class WebDriverWait(object):
                   ``True`` if `method` has raised one of the ignored exceptions
         :raises: :exc:`selenium.common.exceptions.TimeoutException` if timeout occurs
         """
+        screen = None
+        stacktrace = None
+
         end_time = time.time() + self._timeout
         while True:
             try:
-                value = method(self._driver)
+                value = await self._fn_orchestrator(method, self._driver)
                 if not value:
                     return value
-            except self._ignored_exceptions:
-                return True
-            time.sleep(self._poll)
+            except self._ignored_exceptions as ex:        # pylint: disable=catching-non-exception
+                screen = getattr(ex, "screen", None)
+                stacktrace = getattr(ex, "stacktrace", None)
+            await asyncio.sleep(self._poll)
             if time.time() > end_time:
                 break
-        raise TimeoutException(message)
+        raise TimeoutException(message, screen, stacktrace)
+
+    async def _fn_orchestrator(self, fn, *args):
+        return_args = None
+        if inspect.iscoroutinefunction(fn):
+            if args:
+                return_args = await fn(*args)
+            else:
+                return_args = await fn()
+        elif callable(fn):
+            if args:
+                return_args = fn(*args)
+            else:
+                return_args = fn()
+        return return_args

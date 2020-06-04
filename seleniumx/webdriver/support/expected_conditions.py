@@ -84,7 +84,6 @@ def url_matches(pattern):
 
     return _predicate
 
-
 def url_to_be(url):
     """An expectation for checking the current url.
     url is the expected url, which must be an exact match

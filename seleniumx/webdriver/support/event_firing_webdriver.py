@@ -251,7 +251,7 @@ class EventFiringWebElement(object):
             value
         )
 
-    async def find_element(self, by=By.ID, value=None):
+    async def find_element(self, by=By.ID_OR_NAME, value=None):
         response = await self._dispatcher.dispatch(
             self._listener.before_find,
             self._listener.after_dind,
@@ -261,7 +261,7 @@ class EventFiringWebElement(object):
         )
         return response
 
-    async def find_elements(self, by=By.ID, value=None):
+    async def find_elements(self, by=By.ID_OR_NAME, value=None):
         response = await self._dispatcher.dispatch(
             self._listener.before_find,
             self._listener.after_dind,
@@ -316,16 +316,16 @@ class _Dispatcher(object):
         self._ef_driver = ef_driver
         self._driver = ef_driver.wrapped_driver
     
-    async def dispatch(self, before_func, after_func, listener_args, main_func, main_func_args):
-        listener_args = self._ensure_tuple(listener_args)
-        main_func_args = self._ensure_tuple(main_func_args)
-        await self._fn_orchestrator(before_func, *listener_args)
+    async def dispatch(self, before_listener_fn, after_listener_fn, listener_fn_args, main_fn, main_fn_args):
+        listener_fn_args = self._ensure_tuple(listener_fn_args)
+        main_fn_args = self._ensure_tuple(main_fn_args)
+        await self._fn_orchestrator(before_listener_fn, *listener_fn_args)
         try:
-            result = await self._fn_orchestrator(main_func, *main_func_args)
+            result = await self._fn_orchestrator(main_fn, *main_fn_args)
         except Exception as ex:
             self._listener.on_exception(ex, self._driver)
             raise ex
-        await self._fn_orchestrator(after_func, *listener_args)
+        await self._fn_orchestrator(after_listener_fn, *listener_fn_args)
         return _wrap_elements(result, self._ef_driver)
     
     #TODO - this can be made a util

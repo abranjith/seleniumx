@@ -304,3 +304,9 @@ Colors = {
     "YELLOW": Color(255, 255, 0),
     "YELLOWGREEN": Color(154, 205, 50)
 }
+
+#test :~)
+if __name__ == "__main__":
+    print(Color.from_string('#00ff33').rgba)
+    print(Color.from_string('rgb(1, 255, 3)').hex)
+    print(Color.from_string('blue').rgba)
