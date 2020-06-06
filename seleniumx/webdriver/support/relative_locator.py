@@ -18,58 +18,75 @@
 
 from seleniumx.common.exceptions import WebDriverException
 
-
 def with_tag_name(tag_name):
     if tag_name is None:
         raise WebDriverException("tag_name can not be null")
-    return RelativeBy({"css selector": tag_name})
+    return RelativeBy({'css selector': tag_name})
 
 
 class RelativeBy(object):
 
-    def __init__(self, root=None, filters=None):
+    def __init__(
+        self,
+        root = None,
+        filters = None
+    ):
         self.root = root
         self.filters = filters or []
 
-    def above(self, element_or_locator=None):
+    def above(
+        self,
+        element_or_locator = None
+    ):
         if element_or_locator is None:
             raise WebDriverException("Element or locator must be given when calling above method")
-
-        self.filters.append({"kind": "above", "args": [element_or_locator]})
+        d = self._get_kind_dict("above", element_or_locator)
+        self.filters.append(d)
         return self
 
-    def below(self, element_or_locator=None):
+    def below(
+        self,
+        element_or_locator = None
+    ):
         if element_or_locator is None:
             raise WebDriverException("Element or locator must be given when calling above method")
 
-        self.filters.append({"kind": "below", "args": [element_or_locator]})
+        d = self._get_kind_dict("below", element_or_locator)
+        self.filters.append(d)
         return self
 
     def to_left_of(self, element_or_locator=None):
         if element_or_locator is None:
             raise WebDriverException("Element or locator must be given when calling above method")
 
-        self.filters.append({"kind": "left", "args": [element_or_locator]})
+        d = self._get_kind_dict("left", element_or_locator)    
+        self.filters.append(d)
         return self
 
     def to_right_of(self, element_or_locator):
         if element_or_locator is None:
             raise WebDriverException("Element or locator must be given when calling above method")
 
-        self.filters.append({"kind": "right", "args": [element_or_locator]})
+        d = self._get_kind_dict("right", element_or_locator)    
+        self.filters.append(d)
         return self
 
     def near(self, element_or_locator_distance=None):
         if element_or_locator_distance is None:
             raise WebDriverException("Element or locator or distance must be given when calling above method")
 
-        self.filters.append({"kind": "near", "args": [element_or_locator_distance]})
+        d = self._get_kind_dict("near", element_or_locator_distance)    
+        self.filters.append(d)
         return self
+    
+    def _get_kind_dict(self, kind, arg):
+        d = {'kind' : kind, 'args' : [arg]}
+        return d
 
     def to_dict(self):
         return {
             'relative': {
                 'root': self.root,
-                'filters': self.filters,
+                'filters': self.filters
             }
         }
