@@ -23,7 +23,6 @@ def with_tag_name(tag_name):
         raise WebDriverException("tag_name can not be null")
     return RelativeBy({'css selector': tag_name})
 
-
 class RelativeBy(object):
 
     def __init__(

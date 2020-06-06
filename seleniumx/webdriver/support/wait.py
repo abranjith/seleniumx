@@ -31,7 +31,8 @@ class WebDriverWait(object):
         driver,
         timeout,
         poll_frequency = None,
-        ignored_exceptions = None):
+        ignored_exceptions = None
+    ):
         """Constructor, takes a WebDriver instance and timeout in seconds.
 
            :Args:
