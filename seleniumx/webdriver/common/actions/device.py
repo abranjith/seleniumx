@@ -16,9 +16,10 @@
 # under the License.
 
 import uuid
-import inspect
 from collections import namedtuple
 from async_property import async_property
+
+from seleniumx.webdriver.common.utils import AsyncUtils
 
 class Device(object):
     """ Describes the input device being used for the action. """
@@ -114,7 +115,7 @@ class Action(object):
         if self._action is not None:
             return self._action
         if self._action_fn is not None:
-            self._action = await self._fn_orchestrator(self._action_fn.task, self._action_fn.args)
+            self._action = await AsyncUtils.fn_orchestrator(self._action_fn.task, *self._action_fn.args)
         return self._action
     
     def add_pre_action(self, pre_action, args=None, pass_from_previous_call=True):
@@ -130,7 +131,7 @@ class Action(object):
         return_args = None
         for a in self._pre_actions:
             final_args = self._get_merged_args(a.args, a.pass_from_previous_call, return_args)
-            return_args = await self._fn_orchestrator(a.task, final_args)
+            return_args = await AsyncUtils.fn_orchestrator(a.task, *final_args)
         #finalize args for actual action function call
         if self._action_fn is not None:
             final_args = self._get_merged_args(self._action_fn.args, self._action_fn.pass_from_previous_call, return_args)
@@ -152,17 +153,3 @@ class Action(object):
             if not isinstance(args, tuple):
                 args = (args,)
         return args
-    
-    async def _fn_orchestrator(self, fn, args):
-        return_args = None
-        if inspect.iscoroutinefunction(fn):
-            if args:
-                return_args = await fn(*args)
-            else:
-                return_args = await fn()
-        elif callable(fn):
-            if args:
-                return_args = fn(*args)
-            else:
-                return_args = fn()
-        return return_args

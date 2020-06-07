@@ -21,6 +21,7 @@ from functools import update_wrapper
 
 from seleniumx.common.exceptions import WebDriverException
 from seleniumx.webdriver.common.by import By
+from seleniumx.webdriver.common.utils import AsyncUtils
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
 from seleniumx.webdriver.remote.webelement import WebElement
 from seleniumx.webdriver.support.abstract_event_listener import AbstractEventListener
@@ -319,29 +320,14 @@ class _Dispatcher(object):
     async def dispatch(self, before_listener_fn, after_listener_fn, listener_fn_args, main_fn, main_fn_args):
         listener_fn_args = self._ensure_tuple(listener_fn_args)
         main_fn_args = self._ensure_tuple(main_fn_args)
-        await self._fn_orchestrator(before_listener_fn, *listener_fn_args)
+        await AsyncUtils.fn_orchestrator(before_listener_fn, *listener_fn_args)
         try:
-            result = await self._fn_orchestrator(main_fn, *main_fn_args)
+            result = await AsyncUtils.fn_orchestrator(main_fn, *main_fn_args)
         except Exception as ex:
             self._listener.on_exception(ex, self._driver)
             raise ex
-        await self._fn_orchestrator(after_listener_fn, *listener_fn_args)
+        await AsyncUtils.fn_orchestrator(after_listener_fn, *listener_fn_args)
         return _wrap_elements(result, self._ef_driver)
-    
-    #TODO - this can be made a util
-    async def _fn_orchestrator(self, fn, *args):
-        return_args = None
-        if inspect.iscoroutinefunction(fn):
-            if args:
-                return_args = await fn(*args)
-            else:
-                return_args = await fn()
-        elif callable(fn):
-            if args:
-                return_args = fn(*args)
-            else:
-                return_args = fn()
-        return return_args
     
     def _ensure_tuple(self, args):
         if not args:

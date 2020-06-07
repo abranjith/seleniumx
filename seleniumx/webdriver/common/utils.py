@@ -16,14 +16,12 @@
 # under the License.
 
 import asyncio
+import inspect
 import socket
 from urllib.parse import urlparse
 
 import httpx
 from seleniumx.webdriver.common.keys import Keys
-
-# Python 3
-_is_connectable_exceptions = (socket.error, ConnectionResetError)
 
 class NetworkUtils(object):
 
@@ -103,6 +101,27 @@ class HttpUtils(object):
             response = await c.get(url)
             return response
 
+class AsyncUtils(object):
+
+    @staticmethod
+    async def fn_orchestrator(fn, *args):
+        """ Useful when whether function is async or not is known only during run time & 
+        args can be passed in order of what function expects positionally. 
+        For eg, this will fail when function parameters need to be strictly positional vs keword
+        """
+        return_args = None
+        if inspect.iscoroutinefunction(fn):
+            if args:
+                return_args = await fn(*args)
+            else:
+                return_args = await fn()
+        elif callable(fn):
+            if args:
+                return_args = fn(*args)
+            else:
+                return_args = fn()
+        return return_args
+
 
 def find_connectable_ip(host, port=None):
     """Resolve a hostname to an IP, preferring IPv4 addresses.
@@ -168,7 +187,7 @@ def is_connectable2(port, host="localhost"):
     try:
         socket_ = socket.create_connection((host, port), 1)
         result = True
-    except _is_connectable_exceptions:
+    except (socket.error, ConnectionResetError):
         result = False
     finally:
         if socket_:

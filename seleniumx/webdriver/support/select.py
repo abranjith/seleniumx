@@ -18,9 +18,16 @@
 from async_property import async_property
 
 from seleniumx.webdriver.common.by import By
-from seleniumx.common.exceptions import NoSuchElementException, UnexpectedTagNameException
+from seleniumx.common.exceptions import (NoSuchElementException, UnexpectedTagNameException)
 
 class Select(object):
+
+    @staticmethod
+    async def create(webelement): 
+        """ Generic method that can be used to create instance of any WebDriver and also start corresponding driver service with new session """
+        instance = Select(webelement)
+        await instance.init()
+        return instance
 
     def __init__(
         self,
@@ -36,10 +43,15 @@ class Select(object):
             from selenium.webdriver.support.ui import Select \n
             Select(driver.find_element(By.TAG_NAME, "select")).select_by_index(2)
         """
-        if webelement.tag_name.lower() != "select":
-            raise UnexpectedTagNameException(f"Select only works on <select> elements, not on <{webelement.tag_name}>")
         self._element = webelement
         multi = self._element.get_attribute("multiple")
+        self.is_multiple = multi and multi != "false"
+    
+    async def init(self):
+        tag_name = await self._element.webelement.tag_name
+        if tag_name.lower() != "select":
+            raise UnexpectedTagNameException(f"Select only works on <select> elements, not on <{tag_name}>")
+        multi = await self._element.get_attribute("multiple")
         self.is_multiple = multi and multi != "false"
 
     @async_property

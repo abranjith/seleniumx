@@ -19,7 +19,6 @@ import os
 import platform
 import errno
 import warnings
-import inspect
 import asyncio
 from asyncio.subprocess import PIPE
 

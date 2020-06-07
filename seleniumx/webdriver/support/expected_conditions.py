@@ -24,7 +24,6 @@ from seleniumx.common.exceptions import WebDriverException
 from seleniumx.common.exceptions import NoAlertPresentException
 from seleniumx.webdriver.remote.webdriver import WebElement
 
-
 class ExpectedConditions(object):
 
     @staticmethod

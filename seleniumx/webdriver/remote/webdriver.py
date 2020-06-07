@@ -19,20 +19,17 @@ import base64
 import copy
 import pkgutil
 import warnings
-import inspect
 from contextlib import contextmanager
 
 import aiofiles
 from async_property import async_property
 
-from seleniumx.common.exceptions import (InvalidArgumentException,
-                                        WebDriverException,
-                                        NoSuchCookieException,
-                                        UnknownMethodException,
-                                        NoSuchElementException)
+from seleniumx.common.exceptions import (InvalidArgumentException, WebDriverException, NoSuchCookieException,
+                                        UnknownMethodException, NoSuchElementException)
 from seleniumx.webdriver.common.by import By
 from seleniumx.webdriver.common.timeouts import Timeouts
 from seleniumx.webdriver.common.enums import Command
+from seleniumx.webdriver.common.utils import AsyncUtils
 from seleniumx.webdriver.support.relative_locator import RelativeBy
 from seleniumx.webdriver.remote.command_codec import CommandCodec
 from seleniumx.webdriver.remote.http_executor import HttpExecutor
@@ -209,35 +206,12 @@ class RemoteWebDriver(_BaseDriver):
      - error_handler - errorhandler.ErrorHandler object used to handle errors.
     """
 
-    _web_element_cls = WebElement
-
     @classmethod
     async def create(cls, **kwargs): 
         """ Generic method that can be used to create instance of any WebDriver and also start corresponding driver service with new session """
-        webdriver_instance = None
-        try:
-            webdriver_instance = cls(**kwargs)
-            service_starter = webdriver_instance.start_service
-            if inspect.iscoroutinefunction(service_starter):
-                await service_starter()
-            #not really clear why this is here, taken from original impl
-            start_client = webdriver_instance.start_client
-            if inspect.iscoroutinefunction(start_client):
-                await start_client()
-            elif callable(start_client):
-                start_client()
-            await webdriver_instance.start_session()
-            return webdriver_instance
-        finally:
-            try:
-                if webdriver_instance is not None:
-                    quit_ = webdriver_instance.quit
-                    if inspect.iscoroutinefunction(quit_):
-                        await quit_()
-                    elif callable(quit_):
-                        quit_()
-            except:
-                pass
+        webdriver_instance = cls(**kwargs)
+        await webdriver_instance.init()
+        return webdriver_instance
 
     def __init__(
         self,
@@ -282,6 +256,21 @@ class RemoteWebDriver(_BaseDriver):
         self.error_handler = ErrorHandler()
         self._w3c = True
         super().__init__(file_detector=file_detector)
+    
+    async def init(self):
+        """ This method is here to provide an option in case user doesn't want to use WebDriver.create option"""
+        try:
+            await AsyncUtils.fn_orchestrator(self.start_service)
+            #not really clear why this is here, taken from original impl
+            await AsyncUtils.fn_orchestrator(self.start_client)
+            await self.start_session()
+            return self
+        except Exception as ex:
+            try:
+                await AsyncUtils.fn_orchestrator(self.quit)
+            except:
+                pass
+            raise ex
     
     @property
     def w3c(self):
@@ -480,10 +469,7 @@ class RemoteWebDriver(_BaseDriver):
             if self.session_id:
                 await self.execute(Command.QUIT)
         finally:
-            if inspect.iscoroutinefunction(self.stop_client):
-                await self.stop_client()
-            elif callable(self.stop_client):
-                self.stop_client()
+            AsyncUtils.fn_orchestrator(self.stop_client)
             await self._http_executor.close()
 
     @async_property

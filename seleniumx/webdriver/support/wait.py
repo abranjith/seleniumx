@@ -16,10 +16,10 @@
 # under the License.
 
 import time
-import inspect
 import asyncio
 
-from seleniumx.common.exceptions import NoSuchElementException, TimeoutException
+from seleniumx.common.exceptions import (NoSuchElementException, TimeoutException)
+from seleniumx.webdriver.common.utils import AsyncUtils
 
 class WebDriverWait(object):
 
@@ -112,7 +112,7 @@ class WebDriverWait(object):
         end_time = time.time() + self._timeout
         while True:
             try:
-                value = await self._fn_orchestrator(method, self._driver)
+                value = await AsyncUtils.fn_orchestrator(method, self._driver)
                 if value:
                     return value
             except self._ignored_exceptions as ex:          # pylint: disable=catching-non-exception
@@ -142,7 +142,7 @@ class WebDriverWait(object):
         end_time = time.time() + self._timeout
         while True:
             try:
-                value = await self._fn_orchestrator(method, self._driver)
+                value = await AsyncUtils.fn_orchestrator(method, self._driver)
                 if not value:
                     return value
             except self._ignored_exceptions as ex:        # pylint: disable=catching-non-exception
@@ -152,17 +152,3 @@ class WebDriverWait(object):
             if time.time() > end_time:
                 break
         raise TimeoutException(message, screen, stacktrace)
-
-    async def _fn_orchestrator(self, fn, *args):
-        return_args = None
-        if inspect.iscoroutinefunction(fn):
-            if args:
-                return_args = await fn(*args)
-            else:
-                return_args = await fn()
-        elif callable(fn):
-            if args:
-                return_args = fn(*args)
-            else:
-                return_args = fn()
-        return return_args
