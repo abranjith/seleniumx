@@ -14,43 +14,46 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-try:
-    basestring
-except NameError:  # Python 3.x
-    basestring = str
 
 import base64
 import shutil
 import warnings
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
+import aiofiles
 
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.remote.webdriver import RemoteWebDriver
+from seleniumx.webdriver.firefox.firefox_binary import FirefoxBinary
+from seleniumx.webdriver.firefox.firefox_profile import FirefoxProfile
+from seleniumx.webdriver.firefox.options import FirefoxOptions
+from seleniumx.webdriver.firefox.service import FirefoxDriverService
+from seleniumx.webdriver.firefox.command_codec import FirefoxCommandCodec
+from seleniumx.webdriver.firefox.webelement import FirefoxWebElement
+from seleniumx.webdriver.common.enums import Command
+from seleniumx.webdriver.common.options import BaseOptions
+from seleniumx.webdriver.common.service import Service
 
-from .firefox_binary import FirefoxBinary
-from .firefox_profile import FirefoxProfile
-from .options import Options
-from .remote_connection import FirefoxRemoteConnection
-from .service import Service
-from .webelement import FirefoxWebElement
-
-
-DEFAULT_SERVICE_LOG_PATH = None
-
-
-class WebDriver(RemoteWebDriver):
+class FirefoxDriver(RemoteWebDriver):
 
     CONTEXT_CHROME = "chrome"
     CONTEXT_CONTENT = "content"
+    DEFAULT_EXE = "geckodriver"
+    DEFAULT_SERVICE_LOG_PATH = "geckodriver.log"
 
     _web_element_cls = FirefoxWebElement
 
-    def __init__(self, firefox_profile=None, firefox_binary=None,
-                 timeout=30, capabilities=None, proxy=None,
-                 executable_path="geckodriver", options=None,
-                 service_log_path="geckodriver.log", firefox_options=None,
-                 service_args=None, service=None, desired_capabilities=None, log_path=None,
-                 keep_alive=True):
+    def __init__(
+        self,
+        timeout : int = 30,
+        proxy = None,
+        executable_path : str = None,
+        options : BaseOptions = None,
+        service_log_path : str = None,
+        service_args : list = None,
+        service : Service = None,
+        keep_alive : bool = True,
+        **kwargs
+    ):
         """Starts a new local session of Firefox.
 
         Based on the combination and specificity of the various keyword
@@ -102,113 +105,58 @@ class WebDriver(RemoteWebDriver):
              HTTP keep-alive.
         """
 
-        if executable_path != 'geckodriver':
-            warnings.warn('executable_path has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        if capabilities is not None:
-            warnings.warn('capabilities has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-        if firefox_binary is not None:
-            warnings.warn('firefox_binary has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
+        executable_path = executable_path or FirefoxDriver.DEFAULT_EXE
         self.binary = None
-        if firefox_profile is not None:
-            warnings.warn('firefox_profile has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
         self.profile = None
-
-        if log_path != DEFAULT_SERVICE_LOG_PATH:
-            warnings.warn('log_path has been deprecated, please pass in a Service object',
-                          DeprecationWarning, stacklevel=2)
-
+        if service is None:
+            service = FirefoxDriverService(executable_path, service_args=service_args, log_path=service_log_path)
         self.service = service
-
-        # If desired capabilities is set, alias it to capabilities.
-        # If both are set ignore desired capabilities.
-        if capabilities is None and desired_capabilities:
-            capabilities = desired_capabilities
-
-        if capabilities is None:
-            capabilities = DesiredCapabilities.FIREFOX.copy()
         if options is None:
-            options = Options()
+            options = FirefoxOptions()
+        if options.binary is not None:
+            self.binary = options.binary
+        if options.profile is not None:
+            self.profile = options.profile
 
-        capabilities = dict(capabilities)
-
-        if capabilities.get("binary"):
-            self.binary = capabilities["binary"]
-
-        # options overrides capabilities
-        if options is not None:
-            if options.binary is not None:
-                self.binary = options.binary
-            if options.profile is not None:
-                self.profile = options.profile
-
-        # firefox_binary and firefox_profile
-        # override options
-        if firefox_binary is not None:
-            if isinstance(firefox_binary, basestring):
-                firefox_binary = FirefoxBinary(firefox_binary)
-            self.binary = firefox_binary
-            options.binary = firefox_binary
-        if firefox_profile is not None:
-            if isinstance(firefox_profile, basestring):
-                firefox_profile = FirefoxProfile(firefox_profile)
-            self.profile = firefox_profile
-            options.profile = firefox_profile
-
-        if self.service is None:
-            self.service = Service(
-                executable_path,
-                service_args=service_args,
-                log_path=service_log_path)
-        self.service.start()
-
-        capabilities.update(options.to_capabilities())
-
-        executor = FirefoxRemoteConnection(
-            remote_server_addr=self.service.service_url)
-        RemoteWebDriver.__init__(
-            self,
-            command_executor=executor,
-            desired_capabilities=capabilities,
-            keep_alive=True)
-
+        browser_name = DesiredCapabilities.FIREFOX['browserName']
+        command_codec = FirefoxCommandCodec(browser_name=browser_name)
+        super().__init__(command_codec=command_codec, options=options, keep_alive=keep_alive, **kwargs)
         self._is_remote = False
-
-    def quit(self):
-        """Quits the driver and close every associated window."""
+    
+    async def start_service(self):
+        await self.service.start()
+        self.server_url = self.service.service_url
+    
+    async def quit(self):
+        """ Closes the browser and shuts down the Driver executable that was started when starting the Driver """
         try:
-            RemoteWebDriver.quit(self)
-        except Exception:
-            # We don't care about the message because something probably has gone wrong
-            pass
-
-        if self.w3c:
-            self.service.stop()
-        else:
-            self.binary.kill()
-
-        if self.profile is not None:
-            try:
-                shutil.rmtree(self.profile.path)
-                if self.profile.tempfolder is not None:
-                    shutil.rmtree(self.profile.tempfolder)
-            except Exception as e:
-                print(str(e))
+            await super().quit()
+        except Exception as ex:
+            warnings.warn(f"Something went wrong issuing quit request to server. Details - {str(ex)}")
+        finally:
+            if self.w3c:
+                await self.service.stop()
+            else:
+                if self.binary:
+                    self.binary.kill()
+            if self.profile is not None:
+                try:
+                    shutil.rmtree(self.profile.path)
+                    if self.profile and self.profile.tempfolder is not None:
+                        shutil.rmtree(self.profile.tempfolder)
+                except Exception as ex:
+                    warnings.warn(f"Exception cleaning up Firefox profile. Details - {str(ex)}")
 
     @property
     def firefox_profile(self):
         return self.profile
 
     # Extension commands:
+    async def set_context(self, context):
+        await self.execute(Command.SET_CONTEXT, {'context': context})
 
-    def set_context(self, context):
-        self.execute("SET_CONTEXT", {"context": context})
-
-    @contextmanager
-    def context(self, context):
+    @asynccontextmanager
+    async def context(self, context):
         """Sets the context that Selenium commands are running in using
         a `with` statement. The state of the context on the server is
         saved before entering the block, and restored upon exiting it.
@@ -222,14 +170,15 @@ class WebDriver(RemoteWebDriver):
                 # chrome scope
                 ... do stuff ...
         """
-        initial_context = self.execute('GET_CONTEXT').pop('value')
-        self.set_context(context)
+        response = await self.execute(Command.GET_CONTEXT)
+        initial_context = response.get('value')
+        await self.set_context(context)
         try:
             yield
         finally:
-            self.set_context(initial_context)
+            await self.set_context(initial_context)
 
-    def install_addon(self, path, temporary=None):
+    async def install_addon(self, path, temporary=None):
         """
         Installs Firefox addon.
 
@@ -243,12 +192,13 @@ class WebDriver(RemoteWebDriver):
 
                 driver.install_addon('/path/to/firebug.xpi')
         """
-        payload = {"path": path}
+        payload = {'path': path}
         if temporary is not None:
-            payload["temporary"] = temporary
-        return self.execute("INSTALL_ADDON", payload)["value"]
+            payload['temporary'] = temporary
+        response = await self.execute(Command.INSTALL_ADDON, payload)
+        return response['value']
 
-    def uninstall_addon(self, identifier):
+    async def uninstall_addon(self, identifier):
         """
         Uninstalls Firefox addon using its identifier.
 
@@ -257,9 +207,9 @@ class WebDriver(RemoteWebDriver):
 
                 driver.uninstall_addon('addon@foo.com')
         """
-        self.execute("UNINSTALL_ADDON", {"id": identifier})
+        await self.execute(Command.UNINSTALL_ADDON, {'id': identifier})
 
-    def get_full_page_screenshot_as_file(self, filename):
+    async def get_full_page_screenshot_as_file(self, filename):
         """
         Saves a full document screenshot of the current window to a PNG image file. Returns
            False if there is any IOError, else returns True. Use full paths in
@@ -277,17 +227,18 @@ class WebDriver(RemoteWebDriver):
         if not filename.lower().endswith('.png'):
             warnings.warn("name used for saved screenshot does not match file "
                           "type. It should end with a `.png` extension", UserWarning)
-        png = self.get_full_page_screenshot_as_png()
+
+        png_file = await self.get_full_page_screenshot_as_png()
         try:
-            with open(filename, 'wb') as f:
-                f.write(png)
+            async with aiofiles.open(filename, mode="wb") as fd:
+                await fd.write(png_file)
         except IOError:
             return False
         finally:
-            del png
+            del png_file
         return True
 
-    def save_full_page_screenshot(self, filename):
+    async def save_full_page_screenshot(self, filename):
         """
         Saves a full document screenshot of the current window to a PNG image file. Returns
            False if there is any IOError, else returns True. Use full paths in
@@ -302,9 +253,9 @@ class WebDriver(RemoteWebDriver):
 
                 driver.save_full_page_screenshot('/Screenshots/foo.png')
         """
-        return self.get_full_page_screenshot_as_file(filename)
+        return await self.get_full_page_screenshot_as_file(filename)
 
-    def get_full_page_screenshot_as_png(self):
+    async def get_full_page_screenshot_as_png(self):
         """
         Gets the full document screenshot of the current window as a binary data.
 
@@ -313,9 +264,10 @@ class WebDriver(RemoteWebDriver):
 
                 driver.get_full_page_screenshot_as_png()
         """
-        return base64.b64decode(self.get_full_page_screenshot_as_base64().encode('ascii'))
+        base64_screenshot = await self.get_full_page_screenshot_as_base64().encode("ascii")
+        return base64.b64decode(base64_screenshot)
 
-    def get_full_page_screenshot_as_base64(self):
+    async def get_full_page_screenshot_as_base64(self):
         """
         Gets the full document screenshot of the current window as a base64 encoded string
            which is useful in embedded images in HTML.
@@ -325,4 +277,5 @@ class WebDriver(RemoteWebDriver):
 
                 driver.get_full_page_screenshot_as_base64()
         """
-        return self.execute("FULL_PAGE_SCREENSHOT")['value']
+        response = await self.execute(Command.FULL_PAGE_SCREENSHOT)
+        return response['value']

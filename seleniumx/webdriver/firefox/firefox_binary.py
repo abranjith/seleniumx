@@ -23,12 +23,15 @@ from seleniumx.common.exceptions import WebDriverException
 from seleniumx.webdriver.common import utils
 import time
 
-
 class FirefoxBinary(object):
 
     NO_FOCUS_LIBRARY_NAME = "x_ignore_nofocus.so"
 
-    def __init__(self, firefox_path=None, log_file=None):
+    def __init__(
+        self,
+        firefox_path = None,
+        log_file = None
+    ):
         """
         Creates a new instance of Firefox binary.
 

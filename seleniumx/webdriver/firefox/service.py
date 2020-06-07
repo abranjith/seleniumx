@@ -15,16 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from seleniumx.webdriver.common import service
+from seleniumx.webdriver.common.service import Service
 
-
-class Service(service.Service):
-    """Object that manages the starting and stopping of the
+class FirefoxDriverService(Service):
+    """ Object that manages the starting and stopping of the
     GeckoDriver."""
 
-    def __init__(self, executable_path, port=0, service_args=None,
-                 log_path="geckodriver.log", env=None):
-        """Creates a new instance of the GeckoDriver remote service proxy.
+    def __init__(
+        self,
+        executable_path : str,
+        port : int = 0,
+        service_args : list = None,
+        log_path : str = None,
+        env : dict = None
+    ):
+        """ Creates a new instance of the GeckoDriver remote service proxy.
 
         GeckoDriver provides a HTTP interface speaking the W3C WebDriver
         protocol to Marionette.
@@ -41,14 +46,13 @@ class Service(service.Service):
             in the services' environment.
 
         """
-        log_file = open(log_path, "a+") if log_path is not None and log_path != "" else None
-
-        service.Service.__init__(
-            self, executable_path, port=port, log_file=log_file, env=env)
+        log_path = log_path or "geckodriver.log"
+        log_file = open(log_path, "a+") if log_path else None
         self.service_args = service_args or []
+        super().__init__(executable_path, port=port, log_file=log_file, env=env)
 
     def command_line_args(self):
-        return ["--port", "%d" % self.port] + self.service_args
+        return ["--port", f"{self.port}"] + self.service_args
 
-    def send_remote_shutdown_command(self):
-        pass
+    async def send_remote_shutdown_command(self):
+        yield

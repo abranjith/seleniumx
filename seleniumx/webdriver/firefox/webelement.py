@@ -15,13 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from seleniumx.webdriver.remote.webelement import WebElement as RemoteWebElement
+from async_property import async_property
 
+from seleniumx.webdriver.common.enums import Command
+from seleniumx.webdriver.remote.webelement import WebElement as RemoteWebElement
 
 class FirefoxWebElement(RemoteWebElement):
 
-    @property
-    def anonymous_children(self):
+    @async_property
+    async def anonymous_children(self):
         """Retrieve the anonymous children of this element in an XBL
         context.  This is only available in chrome context.
 
@@ -30,11 +32,9 @@ class FirefoxWebElement(RemoteWebElement):
         on MDN for more information.
 
         """
-        return self._execute(
-            "ELEMENT_GET_ANONYMOUS_CHILDREN",
-            {"value": None})
+        return await self._execute(Command.ELEMENT_GET_ANONYMOUS_CHILDREN, {'value': None})
 
-    def find_anonymous_element_by_attribute(self, name, value):
+    async def find_anonymous_element_by_attribute(self, name, value):
         """Retrieve an anonymous descendant with a specified attribute
         value.  Typically used with an (arbitrary) anonid attribute to
         retrieve a specific anonymous child in an XBL binding.
@@ -44,6 +44,6 @@ class FirefoxWebElement(RemoteWebElement):
         on MDN for more information.
 
         """
-        return self._execute(
-            "ELEMENT_FIND_ANONYMOUS_ELEMENTS_BY_ATTRIBUTE",
-            {"name": name, "value": value})["value"]
+        response = await self._execute(Command.ELEMENT_FIND_ANONYMOUS_ELEMENTS_BY_ATTRIBUTE,
+                    {'name': name, 'value': value})
+        return response['value']

@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
 from seleniumx.common.exceptions import InvalidArgumentException
 from seleniumx.webdriver.common.desired_capabilities import DesiredCapabilities
 from seleniumx.webdriver.common.proxy import Proxy
@@ -21,22 +22,24 @@ from seleniumx.webdriver.firefox.firefox_binary import FirefoxBinary
 from seleniumx.webdriver.firefox.firefox_profile import FirefoxProfile
 from seleniumx.webdriver.common.options import ArgOptions
 
-
 class Log(object):
+
     def __init__(self):
         self.level = None
 
     def to_capabilities(self):
         if self.level is not None:
-            return {"log": {"level": self.level}}
+            return {'log': {'level': self.level}}
         return {}
 
 
-class Options(ArgOptions):
+class FirefoxOptions(ArgOptions):
+
     KEY = "moz:firefoxOptions"
+    LOAD_STRATEGY = ["normal", "eager", "none"]
 
     def __init__(self):
-        super(Options, self).__init__()
+        super().__init__()
         self._binary = None
         self._preferences = {}
         self._profile = None
@@ -45,12 +48,12 @@ class Options(ArgOptions):
 
     @property
     def binary(self):
-        """Returns the FirefoxBinary instance"""
+        """ Returns the FirefoxBinary instance"""
         return self._binary
 
     @binary.setter
     def binary(self, new_binary):
-        """Sets location of the browser binary, either by string or
+        """ Sets location of the browser binary, either by string or
         ``FirefoxBinary`` instance.
 
         """
@@ -60,9 +63,7 @@ class Options(ArgOptions):
 
     @property
     def binary_location(self):
-        """
-        :Returns: The location of the binary.
-        """
+        """ :Returns: The location of the binary. """
         return self.binary._start_cmd
 
     @binary_location.setter  # noqa
@@ -80,7 +81,7 @@ class Options(ArgOptions):
 
     @property
     def preferences(self):
-        """:Returns: A dict of preferences."""
+        """ :Returns: A dict of preferences. """
         return self._preferences
 
     def set_preference(self, name, value):
@@ -89,9 +90,7 @@ class Options(ArgOptions):
 
     @property
     def proxy(self):
-        """
-        :Returns: Proxy if set, otherwise None.
-        """
+        """ :Returns: Proxy if set, otherwise None. """
         return self._proxy
 
     @proxy.setter
@@ -102,9 +101,7 @@ class Options(ArgOptions):
 
     @property
     def profile(self):
-        """
-        :Returns: The Firefox profile to use.
-        """
+        """ :Returns: The Firefox profile to use. """
         return self._profile
 
     @profile.setter
@@ -122,31 +119,29 @@ class Options(ArgOptions):
         """
         :Returns: True if the headless argument is set, else False
         """
-        return '-headless' in self._arguments
+        return "-headless" in self._arguments
 
     @headless.setter
     def headless(self, value):
-        """
-        Sets the headless argument
+        """ Sets the headless argument
 
         Args:
           value: boolean value indicating to set the headless option
         """
         if value is True:
-            self._arguments.append('-headless')
-        elif '-headless' in self._arguments:
-            self._arguments.remove('-headless')
+            self._arguments.append("-headless")
+        elif "-headless" in self._arguments:
+            self._arguments.remove("-headless")
 
     @property
     def page_load_strategy(self):
-        return self._caps["pageLoadStrategy"]
+        return self._caps['pageLoadStrategy']
 
     @page_load_strategy.setter
     def page_load_strategy(self, strategy):
-        if strategy in ["normal", "eager", "none"]:
-            self.set_capability("pageLoadStrategy", strategy)
-        else:
-            raise ValueError("Strategy can only be one of the following: normal, eager, none")
+        if strategy not in FirefoxOptions.LOAD_STRATEGY:
+            raise ValueError(f"Strategy can only be one of the following: {', '.join(FirefoxOptions.LOAD_STRATEGY)}")
+        self.set_capability('pageLoadStrategy', strategy)
 
     def to_capabilities(self):
         """Marshals the Firefox options to a `moz:firefoxOptions`
@@ -157,24 +152,21 @@ class Options(ArgOptions):
         # it will defer to geckodriver to find the system Firefox
         # and generate a fresh profile.
         caps = self._caps
-        opts = {}
-
-        if self._binary is not None:
-            opts["binary"] = self._binary._start_cmd
-        if len(self._preferences) > 0:
-            opts["prefs"] = self._preferences
         if self._proxy is not None:
             self._proxy.add_to_capabilities(caps)
+        
+        opts = {}
+        if self._binary is not None:
+            opts['binary'] = self._binary._start_cmd
+        if len(self._preferences) > 0:
+            opts['prefs'] = self._preferences
         if self._profile is not None:
-            opts["profile"] = self._profile.encoded
+            opts['profile'] = self._profile.encoded
         if len(self._arguments) > 0:
-            opts["args"] = self._arguments
-
+            opts['args'] = self._arguments
         opts.update(self.log.to_capabilities())
-
-        if len(opts) > 0:
+        if opts:
             caps[self.KEY] = opts
-
         return caps
 
     @property

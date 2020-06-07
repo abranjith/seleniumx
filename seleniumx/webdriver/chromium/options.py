@@ -27,6 +27,7 @@ from seleniumx.webdriver.common.options import ArgOptions
 class ChromiumOptions(ArgOptions):
     
     KEY = "goog:chromeOptions"
+    LOAD_STRATEGY = ["normal", "eager", "none"] 
 
     def __init__(self):
         super().__init__()
@@ -164,8 +165,8 @@ class ChromiumOptions(ArgOptions):
         self,
         strategy
     ):
-        if strategy not in ["normal", "eager", "none"]:
-            raise ValueError("Strategy can only be one of the following: normal, eager, none")
+        if strategy not in ChromiumOptions.LOAD_STRATEGY:
+            raise ValueError(f"Strategy can only be one of the following: {', '.join(ChromiumOptions.LOAD_STRATEGY)}")
         self.set_capability("pageLoadStrategy", strategy)
 
     def to_capabilities(self):

@@ -205,6 +205,7 @@ class RemoteWebDriver(_BaseDriver):
      - command_executor - remote_connection.RemoteConnection object used to execute commands.
      - error_handler - errorhandler.ErrorHandler object used to handle errors.
     """
+    _web_element_cls = WebElement
 
     @classmethod
     async def create(cls, **kwargs): 
@@ -826,8 +827,7 @@ class RemoteWebDriver(_BaseDriver):
 
                 driver.save_screenshot('/Screenshots/foo.png')
         """
-        response = await self.get_screenshot_as_file(filename)
-        return response
+        return await self.get_screenshot_as_file(filename)
 
     async def get_screenshot_as_png(self):
         """ Gets the screenshot of the current window as a binary data.

@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import with_statement
-
 import base64
 import copy
 import json
@@ -35,19 +33,17 @@ except ImportError:
 from xml.dom import minidom
 from seleniumx.common.exceptions import WebDriverException
 
-
-WEBDRIVER_EXT = "webdriver.xpi"
-WEBDRIVER_PREFERENCES = "webdriver_prefs.json"
-EXTENSION_NAME = "fxdriver@googlecode.com"
-
-
 class AddonFormatError(Exception):
-    """Exception for not well-formed add-on manifest files"""
+    """ Exception for not well-formed add-on manifest files """
 
 
 class FirefoxProfile(object):
+
     ANONYMOUS_PROFILE_NAME = "WEBDRIVER_ANONYMOUS_PROFILE"
     DEFAULT_PREFERENCES = None
+    WEBDRIVER_EXT = "webdriver.xpi"
+    WEBDRIVER_PREFERENCES = "webdriver_prefs.json"
+    EXTENSION_NAME = "fxdriver@googlecode.com"
 
     def __init__(self, profile_directory=None):
         """
@@ -62,7 +58,7 @@ class FirefoxProfile(object):
         """
         if not FirefoxProfile.DEFAULT_PREFERENCES:
             with open(os.path.join(os.path.dirname(__file__),
-                                   WEBDRIVER_PREFERENCES)) as default_prefs:
+                                   FirefoxProfile.WEBDRIVER_PREFERENCES)) as default_prefs:
                 FirefoxProfile.DEFAULT_PREFERENCES = json.load(default_prefs)
 
         self.default_preferences = copy.deepcopy(
@@ -207,8 +203,8 @@ class FirefoxProfile(object):
             - path: url, absolute path to .xpi, or directory of addons
             - unpack: whether to unpack unless specified otherwise in the install.rdf
         """
-        if addon == WEBDRIVER_EXT:
-            addon = os.path.join(os.path.dirname(__file__), WEBDRIVER_EXT)
+        if addon == FirefoxProfile.WEBDRIVER_EXT:
+            addon = os.path.join(os.path.dirname(__file__), FirefoxProfile.WEBDRIVER_EXT)
 
         tmpdir = None
         xpifile = None

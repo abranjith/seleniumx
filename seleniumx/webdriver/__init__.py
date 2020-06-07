@@ -15,9 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from .firefox.webdriver import WebDriver as Firefox  # noqa
+from .firefox.webdriver import FirefoxDriver as Firefox  # noqa
 from .firefox.firefox_profile import FirefoxProfile  # noqa
-from .firefox.options import Options as FirefoxOptions  # noqa
+from .firefox.options import FirefoxOptions as FirefoxOptions  # noqa
 from .chrome.webdriver import ChromeDriver as Chrome  # noqa
 from .chrome.options import ChromeOptions as ChromeOptions  # noqa
 from .ie.webdriver import IEDriver as Ie  # noqa

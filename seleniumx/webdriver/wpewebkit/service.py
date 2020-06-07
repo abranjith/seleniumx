@@ -37,3 +37,6 @@ class WPEWebKitDriverService(Service):
 
     def command_line_args(self):
         return ["-p", f"{self.port}"]
+    
+    async def send_remote_shutdown_command(self):
+        yield
