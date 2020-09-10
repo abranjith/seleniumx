@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
+import platform
 import asyncio
 import inspect
 import socket
@@ -121,6 +123,23 @@ class AsyncUtils(object):
             else:
                 return_args = fn()
         return return_args
+
+
+class Platform(object):
+
+    @staticmethod
+    def is_windows():
+        is_windows = platform.system().lower() == "windows"
+        is_jython_windows = platform.system().lower().startswith("java") and (os.name == "nt")
+        return is_windows or is_jython_windows
+    
+    @staticmethod
+    def is_linux():
+        return platform.system().lower() == "linux"
+    
+    @staticmethod
+    def is_mac():
+        return platform.system().lower() == "darwin"
 
 
 def find_connectable_ip(host, port=None):

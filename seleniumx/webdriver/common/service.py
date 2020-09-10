@@ -113,6 +113,7 @@ class Service(object):
             else:
                 await asyncio.sleep(1)
         else:
+            await self.stop()
             raise WebDriverException(f"Cannot connect to the Service {self.path}")   
     
     async def send_remote_shutdown_command(self):
