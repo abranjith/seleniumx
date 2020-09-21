@@ -71,9 +71,10 @@ class FirefoxBinary(object):
     def _ensure_path(self):
         if not self._start_cmd.strip():
             raise WebDriverException(
-                f"""Failed to find firefox binary. You can set it by specifying the path to 'firefox_binary':{os.linesep}
-                from selenium.webdriver.firefox.firefox_binary import FirefoxBinary{os.linesep}
-                binary = FirefoxBinary('/path/to/binary'){os.linesep}
+                f"""Failed to find firefox binary. You can set it by specifying the path to 'firefox_binary':
+
+                from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+                binary = FirefoxBinary('/path/to/binary')
                 driver = webdriver.Firefox(firefox_binary=binary)
                 """)
 

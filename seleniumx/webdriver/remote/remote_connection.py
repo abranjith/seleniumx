@@ -20,7 +20,6 @@ import logging
 import platform
 import socket
 import string
-
 import certifi
 import urllib3
 
